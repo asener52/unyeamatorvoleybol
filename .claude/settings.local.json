@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create *)",
+      "Bash(npx create-vite@latest --template react temp_project)",
+      "mcp__Claude_Preview__preview_start",
+      "PowerShell(Get-Process -Name \"node\")",
+      "PowerShell(Stop-Process -Force 2>$null)",
+      "Bash(Test-Path \"D:\\\\_App\\\\amator_voleybol\\\\public\")",
+      "Bash(npm run *)"
+    ]
+  }
+}
