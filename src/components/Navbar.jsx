@@ -17,7 +17,7 @@ export default function Navbar() {
   const { settings } = useSettings()
   const brand = settings?.brand || {}
 
-  const siteName = brand.name || 'Ünye Amatör Voleybolcular'
+  const siteName = brand.name || 'Ünye Amatör Voleybol Topluluğu'
   const shortName = brand.shortName || 'ÜAV'
 
   return (

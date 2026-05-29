@@ -32,7 +32,7 @@ export default function AboutPage() {
       <div className="text-center mb-14">
         <FaVolleyballBall className="text-gold-500 text-6xl mx-auto mb-4" />
         <h1 className="text-4xl font-extrabold text-primary-900 mb-4">
-          {about.title || 'Ünye Amatör Voleybolcular'}
+          {about.title || 'Ünye Amatör Voleybol Topluluğu'}
         </h1>
         {about.description && (
           <p className="text-slate-500 text-lg max-w-2xl mx-auto leading-relaxed">{about.description}</p>

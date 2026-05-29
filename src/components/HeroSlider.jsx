@@ -28,7 +28,7 @@ export default function HeroSlider() {
     return (
       <div className="w-full h-[420px] md:h-[560px] bg-gradient-to-br from-primary-900 to-primary-700 flex flex-col items-center justify-center gap-4">
         <FaVolleyballBall className="text-gold-400 text-6xl" />
-        <h1 className="text-4xl md:text-5xl font-extrabold text-white">Ünye Amatör Voleybolcular</h1>
+        <h1 className="text-4xl md:text-5xl font-extrabold text-white">Ünye Amatör Voleybol Topluluğu</h1>
         <p className="text-blue-200 text-lg">Admin panelinden slider görseli ekleyin</p>
       </div>
     )

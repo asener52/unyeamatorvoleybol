@@ -21,7 +21,7 @@ export default function Footer() {
   const social = settings?.social || {}
   const brand = settings?.brand || {}
 
-  const siteName = brand.name || 'Ünye Amatör Voleybolcular'
+  const siteName = brand.name || 'Ünye Amatör Voleybol Topluluğu'
   const tagline = brand.tagline || 'Spor Topluluğu'
   const copyright = brand.copyright || siteName
 

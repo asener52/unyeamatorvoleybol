@@ -110,7 +110,7 @@ export default function ManageSettings() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Site Adı">
               <input value={form.brand.name} onChange={e => setNested('brand', 'name', e.target.value)}
-                placeholder="Ünye Amatör Voleybolcular" className={input} />
+                placeholder="Ünye Amatör Voleybol Topluluğu" className={input} />
             </Field>
             <Field label="Kısa Ad (mobil için)">
               <input value={form.brand.shortName} onChange={e => setNested('brand', 'shortName', e.target.value)}
@@ -122,7 +122,7 @@ export default function ManageSettings() {
             </Field>
             <Field label="Footer Telif Hakkı Metni">
               <input value={form.brand.copyright} onChange={e => setNested('brand', 'copyright', e.target.value)}
-                placeholder="Ünye Amatör Voleybolcular" className={input} />
+                placeholder="Ünye Amatör Voleybol Topluluğu" className={input} />
             </Field>
           </div>
         </Section>
@@ -207,7 +207,7 @@ export default function ManageSettings() {
           <div className="space-y-3">
             <Field label="Başlık">
               <input value={form.about.title} onChange={e => setNested('about', 'title', e.target.value)}
-                placeholder="Ünye Amatör Voleybolcular" className={input} />
+                placeholder="Ünye Amatör Voleybol Topluluğu" className={input} />
             </Field>
             <Field label="Kısa Açıklama">
               <textarea rows={3} value={form.about.description} onChange={e => setNested('about', 'description', e.target.value)}
