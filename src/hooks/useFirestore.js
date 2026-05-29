@@ -42,8 +42,9 @@ export function useCollection(tableName, orderField = 'created_at', limitCount =
   useEffect(() => {
     fetchData()
 
+    const channelName = `${tableName}_all_${Math.random().toString(36).slice(2)}`
     const channel = supabase
-      .channel(`${tableName}_all`)
+      .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, fetchData)
       .subscribe()
 
@@ -77,8 +78,9 @@ export function usePublishedCollection(tableName, limitCount = 20) {
   useEffect(() => {
     fetchData()
 
+    const channelName = `${tableName}_published_${Math.random().toString(36).slice(2)}`
     const channel = supabase
-      .channel(`${tableName}_published`)
+      .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, fetchData)
       .subscribe()
 

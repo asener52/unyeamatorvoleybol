@@ -22,8 +22,9 @@ export function useSettings() {
   useEffect(() => {
     fetchSettings()
 
+    const channelName = `settings_changes_${Math.random().toString(36).slice(2)}`
     const channel = supabase
-      .channel('settings_changes')
+      .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, fetchSettings)
       .subscribe()
 
