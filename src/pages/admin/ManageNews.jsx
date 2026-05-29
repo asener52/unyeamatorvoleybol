@@ -42,7 +42,7 @@ export default function ManageNews() {
     setSaving(true)
     try {
       let imageUrl = form.imageUrl
-      if (imgFile) imageUrl = await uploadFile('images', `news/${Date.now()}_${imgFile.name}`, imgFile)
+      if (imgFile) imageUrl = await uploadFile('news', imgFile.name, imgFile)
       const data = { ...form, imageUrl }
       if (editId) await updateDocument('news', editId, data)
       else await addDocument('news', data)

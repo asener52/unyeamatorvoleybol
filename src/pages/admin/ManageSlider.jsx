@@ -34,7 +34,7 @@ export default function ManageSlider() {
     setSaving(true)
     try {
       let imageUrl = form.imageUrl
-      if (imgFile) imageUrl = await uploadFile('images', `sliders/${Date.now()}_${imgFile.name}`, imgFile)
+      if (imgFile) imageUrl = await uploadFile('sliders', imgFile.name, imgFile)
       const data = { ...form, imageUrl }
       if (editId) await updateDocument('sliders', editId, data)
       else await addDocument('sliders', data)

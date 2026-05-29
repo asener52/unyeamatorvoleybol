@@ -24,7 +24,7 @@ export default function ManageGallery() {
     setSaving(true)
     try {
       let url = imgUrl
-      if (imgFile) url = await uploadFile('images', `gallery/${Date.now()}_${imgFile.name}`, imgFile)
+      if (imgFile) url = await uploadFile('gallery', imgFile.name, imgFile)
       if (!url) { alert('Görsel seçin veya URL girin'); setSaving(false); return }
       await addDocument('gallery', { title, url, published })
       setShowForm(false); setTitle(''); setImgFile(null); setImgUrl(''); setImgPreview(''); setPublished(true)

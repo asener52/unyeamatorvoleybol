@@ -6,11 +6,16 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Supabase Storage: görsel yükle ve public URL döndür
-export async function uploadFile(bucket, path, file) {
+// bucket: 'news' | 'sliders' | 'gallery' | 'events'
+export async function uploadFile(bucket, filename, file) {
+  const path = `${Date.now()}_${filename}`
+
   const { data, error } = await supabase.storage
     .from(bucket)
     .upload(path, file, { upsert: true })
-  if (error) throw error
+
+  if (error) throw new Error(error.message)
+
   const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path)
   return urlData.publicUrl
 }

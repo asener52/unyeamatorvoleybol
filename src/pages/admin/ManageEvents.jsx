@@ -48,7 +48,7 @@ export default function ManageEvents() {
     setSaving(true)
     try {
       let imageUrl = form.imageUrl
-      if (imgFile) imageUrl = await uploadFile('images', `events/${Date.now()}_${imgFile.name}`, imgFile)
+      if (imgFile) imageUrl = await uploadFile('events', imgFile.name, imgFile)
       const data = {
         title: form.title, description: form.description, type: form.type,
         date: form.dateStr || null,
