@@ -57,8 +57,9 @@ export function usePublishedCollection(collectionName, limitCount = 20) {
         setDocs(snapshot.docs.map(d => ({ id: d.id, ...d.data() })))
         setLoading(false)
       },
-      () => {
+      (err) => {
         clearTimeout(timeout)
+        console.error(`[Firestore] ${collectionName} sorgu hatası:`, err.message)
         setLoading(false)
       }
     )
