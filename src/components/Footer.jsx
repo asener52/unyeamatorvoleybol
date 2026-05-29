@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import {
   FaVolleyballBall,
   FaFacebook, FaInstagram, FaYoutube, FaTwitter, FaWhatsapp, FaTiktok,
@@ -94,9 +93,8 @@ export default function Footer() {
           )}
         </div>
 
-        <div className="border-t border-primary-700 mt-8 pt-6 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-blue-400">
+        <div className="border-t border-primary-700 mt-8 pt-6 text-center text-xs text-blue-400">
           <span>© {new Date().getFullYear()} {copyright}. Tüm hakları saklıdır.</span>
-          <Link to="/admin" className="hover:text-gold-400 transition-colors">Yönetici Girişi</Link>
         </div>
       </div>
     </footer>
