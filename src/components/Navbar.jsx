@@ -10,6 +10,7 @@ const navLinks = [
   { to: '/galeri', label: 'Galeri' },
   { to: '/anketler', label: 'Anketler' },
   { to: '/hakkimizda', label: 'Hakkımızda' },
+  { to: '/mac-kayit', label: 'Maça Katıl', highlight: true },
 ]
 
 export default function Navbar() {
@@ -36,17 +37,15 @@ export default function Navbar() {
 
           {/* Desktop links */}
           <div className="hidden md:flex items-center gap-1">
-            {navLinks.map(({ to, label }) => (
+            {navLinks.map(({ to, label, highlight }) => (
               <NavLink
                 key={to}
                 to={to}
                 end={to === '/'}
                 className={({ isActive }) =>
-                  `px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                    isActive
-                      ? 'bg-gold-500 text-primary-900'
-                      : 'text-blue-100 hover:bg-primary-700 hover:text-white'
-                  }`
+                  highlight
+                    ? `px-3 py-2 rounded-md text-sm font-bold transition-colors duration-200 ${isActive ? 'bg-gold-600 text-primary-900' : 'bg-gold-500 text-primary-900 hover:bg-gold-400'}`
+                    : `px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${isActive ? 'bg-gold-500 text-primary-900' : 'text-blue-100 hover:bg-primary-700 hover:text-white'}`
                 }
               >
                 {label}
@@ -67,18 +66,16 @@ export default function Navbar() {
       {/* Mobile menu */}
       {open && (
         <div className="md:hidden bg-primary-900 pb-3 px-4 space-y-1">
-          {navLinks.map(({ to, label }) => (
+          {navLinks.map(({ to, label, highlight }) => (
             <NavLink
               key={to}
               to={to}
               end={to === '/'}
               onClick={() => setOpen(false)}
               className={({ isActive }) =>
-                `block px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-gold-500 text-primary-900'
-                    : 'text-blue-100 hover:bg-primary-700 hover:text-white'
-                }`
+                highlight
+                  ? `block px-3 py-2 rounded-md text-sm font-bold transition-colors ${isActive ? 'bg-gold-600 text-primary-900' : 'bg-gold-500 text-primary-900'}`
+                  : `block px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive ? 'bg-gold-500 text-primary-900' : 'text-blue-100 hover:bg-primary-700 hover:text-white'}`
               }
             >
               {label}

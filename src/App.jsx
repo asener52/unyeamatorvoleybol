@@ -21,6 +21,8 @@ import ManageGallery from './pages/admin/ManageGallery'
 import ManageEvents from './pages/admin/ManageEvents'
 import ManagePolls from './pages/admin/ManagePolls'
 import ManageSettings from './pages/admin/ManageSettings'
+import ManageMatchRequests from './pages/admin/ManageMatchRequests'
+import MatchRequestPage from './pages/MatchRequestPage'
 
 function PublicLayout({ children }) {
   return (
@@ -44,6 +46,7 @@ function AdminPages() {
           <Route path="etkinlikler" element={<ManageEvents />} />
           <Route path="anketler" element={<ManagePolls />} />
           <Route path="ayarlar" element={<ManageSettings />} />
+          <Route path="mac-talepleri" element={<ManageMatchRequests />} />
         </Routes>
       </AdminLayout>
     </ProtectedRoute>
@@ -68,6 +71,7 @@ export default function App() {
           <Route path="/galeri" element={<PublicLayout><GalleryPage /></PublicLayout>} />
           <Route path="/anketler" element={<PublicLayout><PollsPage /></PublicLayout>} />
           <Route path="/hakkimizda" element={<PublicLayout><AboutPage /></PublicLayout>} />
+          <Route path="/mac-kayit" element={<PublicLayout><MatchRequestPage /></PublicLayout>} />
         </Routes>
         </SettingsProvider>
       </AuthProvider>
