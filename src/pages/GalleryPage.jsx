@@ -1,11 +1,24 @@
 import { useState } from 'react'
 import SectionHeader from '../components/SectionHeader'
 import { usePublishedCollection } from '../hooks/useFirestore'
-import { FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa'
+import { useSettings } from '../hooks/useSettings'
+import { FaTimes, FaChevronLeft, FaChevronRight, FaFacebook, FaInstagram, FaYoutube, FaTwitter, FaWhatsapp, FaTiktok } from 'react-icons/fa'
+
+const SOCIAL_ICONS = {
+  facebook:  { Icon: FaFacebook,  href: v => v },
+  instagram: { Icon: FaInstagram, href: v => v },
+  youtube:   { Icon: FaYoutube,   href: v => v },
+  twitter:   { Icon: FaTwitter,   href: v => v },
+  whatsapp:  { Icon: FaWhatsapp,  href: v => `https://wa.me/${v.replace(/\D/g, '')}` },
+  tiktok:    { Icon: FaTiktok,    href: v => v },
+}
 
 export default function GalleryPage() {
   const { docs: images, loading } = usePublishedCollection('gallery', 100)
+  const { settings } = useSettings()
   const [lightbox, setLightbox] = useState(null)
+  const social = settings?.social || {}
+  const activeSocials = Object.entries(SOCIAL_ICONS).filter(([key]) => social[key])
 
   function prev() { setLightbox(i => (i - 1 + images.length) % images.length) }
   function next() { setLightbox(i => (i + 1) % images.length) }
@@ -37,6 +50,7 @@ export default function GalleryPage() {
         </div>
       )}
 
+      {/* Lightbox */}
       {lightbox !== null && (
         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
           <button className="absolute top-4 right-4 text-white hover:text-gold-400 z-10" onClick={() => setLightbox(null)}>
@@ -59,6 +73,21 @@ export default function GalleryPage() {
               {images[lightbox].title}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Sosyal medya — fotoğrafları sosyalde takip et */}
+      {activeSocials.length > 0 && (
+        <div className="mt-14 text-center">
+          <p className="text-slate-500 text-sm mb-4">Daha fazla fotoğraf için bizi takip edin</p>
+          <div className="flex justify-center gap-4">
+            {activeSocials.map(([key, { Icon, href }]) => (
+              <a key={key} href={href(social[key])} target="_blank" rel="noreferrer"
+                className="text-primary-600 hover:text-gold-500 transition-colors text-2xl">
+                <Icon />
+              </a>
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -1,9 +1,12 @@
 import EventCard from '../components/EventCard'
 import SectionHeader from '../components/SectionHeader'
 import { usePublishedCollection } from '../hooks/useFirestore'
+import { useSettings } from '../hooks/useSettings'
+import { FaEnvelope } from 'react-icons/fa'
 
 export default function EventsPage() {
   const { docs, loading } = usePublishedCollection('events', 50)
+  const { settings } = useSettings()
 
   const now = new Date()
   const upcoming = docs.filter(e => {
@@ -44,6 +47,17 @@ export default function EventsPage() {
             </section>
           )}
         </>
+      )}
+
+      {/* CTA: etkinlik hakkında bilgi almak isteyenler için */}
+      {settings?.contact?.email && (
+        <div className="mt-14 bg-primary-50 border border-primary-100 rounded-2xl p-6 text-center">
+          <p className="text-slate-600 text-sm mb-3">Etkinlikler hakkında bilgi almak için bize ulaşın</p>
+          <a href={`mailto:${settings.contact.email}`}
+            className="inline-flex items-center gap-2 text-primary-700 hover:text-primary-900 font-semibold text-sm transition-colors">
+            <FaEnvelope size={14} /> {settings.contact.email}
+          </a>
+        </div>
       )}
     </div>
   )

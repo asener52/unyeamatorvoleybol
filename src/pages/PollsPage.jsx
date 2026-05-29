@@ -1,9 +1,23 @@
 import PollCard from '../components/PollCard'
 import SectionHeader from '../components/SectionHeader'
 import { usePublishedCollection } from '../hooks/useFirestore'
+import { useSettings } from '../hooks/useSettings'
+import { FaFacebook, FaInstagram, FaYoutube, FaTwitter, FaWhatsapp, FaTiktok } from 'react-icons/fa'
+
+const SOCIAL_ICONS = {
+  facebook:  { Icon: FaFacebook,  href: v => v },
+  instagram: { Icon: FaInstagram, href: v => v },
+  youtube:   { Icon: FaYoutube,   href: v => v },
+  twitter:   { Icon: FaTwitter,   href: v => v },
+  whatsapp:  { Icon: FaWhatsapp,  href: v => `https://wa.me/${v.replace(/\D/g, '')}` },
+  tiktok:    { Icon: FaTiktok,    href: v => v },
+}
 
 export default function PollsPage() {
   const { docs: polls, loading } = usePublishedCollection('polls', 50)
+  const { settings } = useSettings()
+  const social = settings?.social || {}
+  const activeSocials = Object.entries(SOCIAL_ICONS).filter(([key]) => social[key])
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -19,6 +33,21 @@ export default function PollsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {polls.map(poll => <PollCard key={poll.id} poll={poll} />)}
+        </div>
+      )}
+
+      {/* Sosyal medya takip daveti */}
+      {activeSocials.length > 0 && (
+        <div className="mt-14 text-center">
+          <p className="text-slate-500 text-sm mb-4">Bizi takip edin, anketlere ilk siz ulaşın</p>
+          <div className="flex justify-center gap-4">
+            {activeSocials.map(([key, { Icon, href }]) => (
+              <a key={key} href={href(social[key])} target="_blank" rel="noreferrer"
+                className="text-primary-600 hover:text-gold-500 transition-colors text-2xl">
+                <Icon />
+              </a>
+            ))}
+          </div>
         </div>
       )}
     </div>

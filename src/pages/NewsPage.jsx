@@ -4,9 +4,19 @@ import { supabase } from '../lib/supabase'
 import NewsCard from '../components/NewsCard'
 import SectionHeader from '../components/SectionHeader'
 import { usePublishedCollection } from '../hooks/useFirestore'
-import { FaArrowLeft, FaCalendarAlt, FaTag } from 'react-icons/fa'
+import { useSettings } from '../hooks/useSettings'
+import { FaArrowLeft, FaCalendarAlt, FaTag, FaFacebook, FaInstagram, FaYoutube, FaTwitter, FaWhatsapp, FaTiktok } from 'react-icons/fa'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
+
+const SOCIAL_ICONS = {
+  facebook:  { Icon: FaFacebook,  href: v => v },
+  instagram: { Icon: FaInstagram, href: v => v },
+  youtube:   { Icon: FaYoutube,   href: v => v },
+  twitter:   { Icon: FaTwitter,   href: v => v },
+  whatsapp:  { Icon: FaWhatsapp,  href: v => `https://wa.me/${v.replace(/\D/g, '')}` },
+  tiktok:    { Icon: FaTiktok,    href: v => v },
+}
 
 function formatDate(ts) {
   if (!ts) return ''
@@ -72,6 +82,9 @@ function NewsDetail({ id }) {
 export default function NewsPage() {
   const { id } = useParams()
   const { docs: news, loading } = usePublishedCollection('news', 50)
+  const { settings } = useSettings()
+  const social = settings?.social || {}
+  const activeSocials = Object.entries(SOCIAL_ICONS).filter(([key]) => social[key])
 
   if (id) {
     return (
@@ -93,6 +106,20 @@ export default function NewsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {news.map(n => <NewsCard key={n.id} news={n} />)}
+        </div>
+      )}
+
+      {activeSocials.length > 0 && (
+        <div className="mt-14 text-center">
+          <p className="text-slate-500 text-sm mb-4">Haberleri sosyal medyada takip edin</p>
+          <div className="flex justify-center gap-4">
+            {activeSocials.map(([key, { Icon, href }]) => (
+              <a key={key} href={href(social[key])} target="_blank" rel="noreferrer"
+                className="text-primary-600 hover:text-gold-500 transition-colors text-2xl">
+                <Icon />
+              </a>
+            ))}
+          </div>
         </div>
       )}
     </div>

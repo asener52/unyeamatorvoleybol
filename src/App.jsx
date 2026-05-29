@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { SettingsProvider } from './contexts/SettingsContext'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ProtectedRoute from './components/admin/ProtectedRoute'
@@ -53,6 +54,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <SettingsProvider>
         <Routes>
           {/* Admin routes */}
           <Route path="/admin/giris" element={<AdminLogin />} />
@@ -67,6 +69,7 @@ export default function App() {
           <Route path="/anketler" element={<PublicLayout><PollsPage /></PublicLayout>} />
           <Route path="/hakkimizda" element={<PublicLayout><AboutPage /></PublicLayout>} />
         </Routes>
+        </SettingsProvider>
       </AuthProvider>
     </BrowserRouter>
   )
