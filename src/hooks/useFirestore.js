@@ -1,90 +1,106 @@
-import { useState, useEffect } from 'react'
-import {
-  collection, query, orderBy, limit, onSnapshot,
-  addDoc, updateDoc, deleteDoc, doc, serverTimestamp, where, getDocs
-} from 'firebase/firestore'
-import { db } from '../firebase/config'
+import { useState, useEffect, useCallback } from 'react'
+import { supabase } from '../lib/supabase'
 
-export function useCollection(collectionName, orderField = 'createdAt', limitCount = 50) {
+// snake_case (Supabase) → camelCase (UI)
+function normalize(row) {
+  if (!row) return row
+  return {
+    ...row,
+    imageUrl: row.image_url ?? row.imageUrl ?? '',
+    createdAt: row.created_at ?? row.createdAt ?? null,
+    updatedAt: row.updated_at ?? row.updatedAt ?? null,
+  }
+}
+
+// camelCase (UI) → snake_case (Supabase)
+function denormalize(data) {
+  const r = { ...data }
+  delete r.id
+  delete r.createdAt
+  delete r.updatedAt
+  if ('imageUrl' in r) { r.image_url = r.imageUrl; delete r.imageUrl }
+  return r
+}
+
+export function useCollection(tableName, orderField = 'created_at', limitCount = 50) {
   const [docs, setDocs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  const fetchData = useCallback(async () => {
+    const { data, error: err } = await supabase
+      .from(tableName)
+      .select('*')
+      .order(orderField, { ascending: false })
+      .limit(limitCount)
+
+    if (err) { setError(err.message); setLoading(false); return }
+    setDocs((data || []).map(normalize))
+    setLoading(false)
+  }, [tableName, orderField, limitCount])
+
   useEffect(() => {
-    const q = query(
-      collection(db, collectionName),
-      orderBy(orderField, 'desc'),
-      limit(limitCount)
-    )
+    fetchData()
 
-    const unsubscribe = onSnapshot(q,
-      (snapshot) => {
-        const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
-        setDocs(data)
-        setLoading(false)
-      },
-      (err) => {
-        setError(err.message)
-        setLoading(false)
-      }
-    )
+    const channel = supabase
+      .channel(`${tableName}_all`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, fetchData)
+      .subscribe()
 
-    return unsubscribe
-  }, [collectionName, orderField, limitCount])
+    return () => { supabase.removeChannel(channel) }
+  }, [tableName, fetchData])
 
   return { docs, loading, error }
 }
 
-export function usePublishedCollection(collectionName, limitCount = 20) {
+export function usePublishedCollection(tableName, limitCount = 20) {
   const [docs, setDocs] = useState([])
   const [loading, setLoading] = useState(true)
 
+  const fetchData = useCallback(async () => {
+    const { data, error: err } = await supabase
+      .from(tableName)
+      .select('*')
+      .eq('published', true)
+      .order('created_at', { ascending: false })
+      .limit(limitCount)
+
+    if (err) {
+      console.error(`[Supabase] ${tableName} sorgu hatası:`, err.message)
+      setLoading(false)
+      return
+    }
+    setDocs((data || []).map(normalize))
+    setLoading(false)
+  }, [tableName, limitCount])
+
   useEffect(() => {
-    // Timeout: if Firebase doesn't respond in 4s, show empty (fallback to sample)
-    const timeout = setTimeout(() => setLoading(false), 1500)
+    fetchData()
 
-    const q = query(
-      collection(db, collectionName),
-      where('published', '==', true),
-      orderBy('createdAt', 'desc'),
-      limit(limitCount)
-    )
+    const channel = supabase
+      .channel(`${tableName}_published`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, fetchData)
+      .subscribe()
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        clearTimeout(timeout)
-        setDocs(snapshot.docs.map(d => ({ id: d.id, ...d.data() })))
-        setLoading(false)
-      },
-      (err) => {
-        clearTimeout(timeout)
-        console.error(`[Firestore] ${collectionName} sorgu hatası:`, err.message)
-        setLoading(false)
-      }
-    )
-
-    return () => { clearTimeout(timeout); unsubscribe() }
-  }, [collectionName, limitCount])
+    return () => { supabase.removeChannel(channel) }
+  }, [tableName, fetchData])
 
   return { docs, loading }
 }
 
-export async function addDocument(collectionName, data) {
-  return addDoc(collection(db, collectionName), {
-    ...data,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  })
+export async function addDocument(tableName, data) {
+  const row = { ...denormalize(data), updated_at: new Date().toISOString() }
+  const { error } = await supabase.from(tableName).insert([row])
+  if (error) throw error
 }
 
-export async function updateDocument(collectionName, id, data) {
-  return updateDoc(doc(db, collectionName, id), {
-    ...data,
-    updatedAt: serverTimestamp(),
-  })
+export async function updateDocument(tableName, id, data) {
+  const row = { ...denormalize(data), updated_at: new Date().toISOString() }
+  const { error } = await supabase.from(tableName).update(row).eq('id', id)
+  if (error) throw error
 }
 
-export async function deleteDocument(collectionName, id) {
-  return deleteDoc(doc(db, collectionName, id))
+export async function deleteDocument(tableName, id) {
+  const { error } = await supabase.from(tableName).delete().eq('id', id)
+  if (error) throw error
 }

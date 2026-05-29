@@ -1,35 +1,27 @@
 import { useState } from 'react'
-import { doc, runTransaction, arrayUnion } from 'firebase/firestore'
-import { db } from '../firebase/config'
+import { supabase } from '../lib/supabase'
 import { FaPoll, FaCheckCircle } from 'react-icons/fa'
 
 export default function PollCard({ poll }) {
-  const [voted, setVoted] = useState(() => {
-    const stored = localStorage.getItem(`poll_${poll.id}`)
-    return stored || null
-  })
+  const [voted, setVoted] = useState(() => localStorage.getItem(`poll_${poll.id}`) || null)
   const [localVotes, setLocalVotes] = useState(poll.votes || {})
 
   const totalVotes = Object.values(localVotes).reduce((a, b) => a + b, 0)
 
   async function handleVote(optionId) {
     if (voted) return
-
     try {
-      const pollRef = doc(db, 'polls', poll.id)
-      await runTransaction(db, async (tx) => {
-        const snap = await tx.get(pollRef)
-        const current = snap.data().votes || {}
-        current[optionId] = (current[optionId] || 0) + 1
-        tx.update(pollRef, { votes: current })
-      })
-
       const newVotes = { ...localVotes, [optionId]: (localVotes[optionId] || 0) + 1 }
+      const { error } = await supabase
+        .from('polls')
+        .update({ votes: newVotes })
+        .eq('id', poll.id)
+      if (error) throw error
       setLocalVotes(newVotes)
       setVoted(optionId)
       localStorage.setItem(`poll_${poll.id}`, optionId)
     } catch {
-      // silently fail
+      // sessizce geç
     }
   }
 

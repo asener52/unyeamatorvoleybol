@@ -1,7 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { doc, getDoc } from 'firebase/firestore'
-import { db } from '../firebase/config'
+import { supabase } from '../lib/supabase'
 import NewsCard from '../components/NewsCard'
 import SectionHeader from '../components/SectionHeader'
 import { usePublishedCollection } from '../hooks/useFirestore'
@@ -11,10 +10,7 @@ import { tr } from 'date-fns/locale'
 
 function formatDate(ts) {
   if (!ts) return ''
-  try {
-    const d = ts.toDate ? ts.toDate() : new Date(ts)
-    return format(d, 'd MMMM yyyy', { locale: tr })
-  } catch { return '' }
+  try { return format(new Date(ts), 'd MMMM yyyy', { locale: tr }) } catch { return '' }
 }
 
 function NewsDetail({ id }) {
@@ -22,10 +18,9 @@ function NewsDetail({ id }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    getDoc(doc(db, 'news', id)).then(snap => {
-      if (snap.exists()) setNews({ id: snap.id, ...snap.data() })
-      setLoading(false)
-    }).catch(() => setLoading(false))
+    supabase.from('news').select('*').eq('id', id).single()
+      .then(({ data }) => { setNews(data ? { ...data, imageUrl: data.image_url, createdAt: data.created_at } : null); setLoading(false) })
+      .catch(() => setLoading(false))
   }, [id])
 
   if (loading) return (

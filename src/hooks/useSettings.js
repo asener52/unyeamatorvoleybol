@@ -1,31 +1,41 @@
 import { useState, useEffect } from 'react'
-import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from '../firebase/config'
+import { supabase } from '../lib/supabase'
 
 export function useSettings() {
   const [settings, setSettings] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  const fetchSettings = async () => {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('data')
+      .eq('id', 'siteConfig')
+      .single()
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('[Supabase] Settings yüklenemedi:', error.message)
+    }
+    setSettings(data?.data || null)
+    setLoading(false)
+  }
+
   useEffect(() => {
-    const timeout = setTimeout(() => setLoading(false), 3000)
-    const unsubscribe = onSnapshot(
-      doc(db, 'settings', 'siteConfig'),
-      (snap) => {
-        clearTimeout(timeout)
-        setSettings(snap.exists() ? snap.data() : null)
-        setLoading(false)
-      },
-      () => { clearTimeout(timeout); setLoading(false) }
-    )
-    return () => { clearTimeout(timeout); unsubscribe() }
+    fetchSettings()
+
+    const channel = supabase
+      .channel('settings_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, fetchSettings)
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
   }, [])
 
   return { settings, loading }
 }
 
 export async function saveSettings(data) {
-  return setDoc(doc(db, 'settings', 'siteConfig'), {
-    ...data,
-    updatedAt: serverTimestamp(),
-  }, { merge: true })
+  const { error } = await supabase
+    .from('settings')
+    .upsert({ id: 'siteConfig', data, updated_at: new Date().toISOString() })
+  if (error) throw error
 }

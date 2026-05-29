@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useCollection, addDocument, updateDocument, deleteDocument } from '../../hooks/useFirestore'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { storage } from '../../firebase/config'
-import { Timestamp } from 'firebase/firestore'
+import { uploadFile } from '../../lib/supabase'
 import { FaPlus, FaEdit, FaTrash, FaEye, FaEyeSlash, FaTimes, FaImage } from 'react-icons/fa'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
@@ -11,12 +9,9 @@ import { tr } from 'date-fns/locale'
 const EVENT_TYPES = ['Antrenman', 'Turnuva', 'Sosyal', 'Toplantı', 'Diğer']
 const EMPTY_FORM = { title: '', description: '', type: 'Antrenman', dateStr: '', time: '', location: '', capacity: '', imageUrl: '', published: false }
 
-function formatDate(ts) {
-  if (!ts) return ''
-  try {
-    const d = ts.toDate ? ts.toDate() : new Date(ts)
-    return format(d, 'd MMM yyyy', { locale: tr })
-  } catch { return '' }
+function formatDate(val) {
+  if (!val) return ''
+  try { return format(new Date(val), 'd MMM yyyy', { locale: tr }) } catch { return '' }
 }
 
 export default function ManageEvents() {
@@ -32,10 +27,11 @@ export default function ManageEvents() {
   function openNew() { setForm(EMPTY_FORM); setEditId(null); setImgPreview(''); setImgFile(null); setShowForm(true) }
 
   function openEdit(doc) {
-    const dateStr = doc.date ? format(doc.date.toDate ? doc.date.toDate() : new Date(doc.date), 'yyyy-MM-dd') : ''
     setForm({
       title: doc.title || '', description: doc.description || '', type: doc.type || 'Antrenman',
-      dateStr, time: doc.time || '', location: doc.location || '', capacity: doc.capacity?.toString() || '',
+      dateStr: doc.date ? String(doc.date).slice(0, 10) : '',
+      time: doc.time || '', location: doc.location || '',
+      capacity: doc.capacity?.toString() || '',
       imageUrl: doc.imageUrl || '', published: doc.published ?? false
     })
     setEditId(doc.id); setImgPreview(doc.imageUrl || ''); setImgFile(null); setShowForm(true)
@@ -52,15 +48,11 @@ export default function ManageEvents() {
     setSaving(true)
     try {
       let imageUrl = form.imageUrl
-      if (imgFile) {
-        const imgRef = ref(storage, `events/${Date.now()}_${imgFile.name}`)
-        await uploadBytes(imgRef, imgFile)
-        imageUrl = await getDownloadURL(imgRef)
-      }
-      const date = form.dateStr ? Timestamp.fromDate(new Date(form.dateStr)) : null
+      if (imgFile) imageUrl = await uploadFile('images', `events/${Date.now()}_${imgFile.name}`, imgFile)
       const data = {
         title: form.title, description: form.description, type: form.type,
-        date, time: form.time, location: form.location,
+        date: form.dateStr || null,
+        time: form.time, location: form.location,
         capacity: form.capacity ? parseInt(form.capacity) : null,
         imageUrl, published: form.published
       }

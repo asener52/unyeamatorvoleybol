@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useCollection, addDocument, updateDocument, deleteDocument } from '../../hooks/useFirestore'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { storage } from '../../firebase/config'
+import { uploadFile } from '../../lib/supabase'
 import { FaPlus, FaTrash, FaEye, FaEyeSlash, FaTimes, FaImage, FaUpload } from 'react-icons/fa'
 
 export default function ManageGallery() {
@@ -17,8 +16,7 @@ export default function ManageGallery() {
   function handleImgChange(e) {
     const file = e.target.files[0]
     if (!file) return
-    setImgFile(file)
-    setImgPreview(URL.createObjectURL(file))
+    setImgFile(file); setImgPreview(URL.createObjectURL(file))
   }
 
   async function handleSubmit(e) {
@@ -26,11 +24,7 @@ export default function ManageGallery() {
     setSaving(true)
     try {
       let url = imgUrl
-      if (imgFile) {
-        const imgRef = ref(storage, `gallery/${Date.now()}_${imgFile.name}`)
-        await uploadBytes(imgRef, imgFile)
-        url = await getDownloadURL(imgRef)
-      }
+      if (imgFile) url = await uploadFile('images', `gallery/${Date.now()}_${imgFile.name}`, imgFile)
       if (!url) { alert('Görsel seçin veya URL girin'); setSaving(false); return }
       await addDocument('gallery', { title, url, published })
       setShowForm(false); setTitle(''); setImgFile(null); setImgUrl(''); setImgPreview(''); setPublished(true)
@@ -75,7 +69,6 @@ export default function ManageGallery() {
                 <input value={title} onChange={e => setTitle(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Görsel *</label>
                 <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-primary-400 hover:bg-primary-50 transition-colors overflow-hidden">
@@ -93,13 +86,11 @@ export default function ManageGallery() {
                   placeholder="ya da görsel URL yapıştırın"
                   className="mt-2 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
               </div>
-
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={published} onChange={e => setPublished(e.target.checked)}
                   className="w-4 h-4 rounded text-primary-600" />
                 <span className="text-sm font-medium text-slate-700">Yayınla</span>
               </label>
-
               <div className="flex gap-3 pt-2">
                 <button type="submit" disabled={saving}
                   className="flex-1 bg-primary-700 hover:bg-primary-800 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">

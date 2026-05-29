@@ -88,7 +88,7 @@ export default function AdminLogin() {
         </div>
 
         <p className="text-center text-blue-300 text-sm mt-6">
-          Firebase Authentication ile korunan panel
+          Supabase Authentication ile korunan panel
         </p>
       </div>
     </div>

@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useCollection, addDocument, updateDocument, deleteDocument } from '../../hooks/useFirestore'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { storage } from '../../firebase/config'
+import { uploadFile } from '../../lib/supabase'
 import { FaPlus, FaEdit, FaTrash, FaEye, FaEyeSlash, FaTimes, FaImage } from 'react-icons/fa'
 
 const EMPTY_FORM = { title: '', subtitle: '', imageUrl: '', published: false, order: 0 }
@@ -27,8 +26,7 @@ export default function ManageSlider() {
   function handleImgChange(e) {
     const file = e.target.files[0]
     if (!file) return
-    setImgFile(file)
-    setImgPreview(URL.createObjectURL(file))
+    setImgFile(file); setImgPreview(URL.createObjectURL(file))
   }
 
   async function handleSubmit(e) {
@@ -36,11 +34,7 @@ export default function ManageSlider() {
     setSaving(true)
     try {
       let imageUrl = form.imageUrl
-      if (imgFile) {
-        const imgRef = ref(storage, `sliders/${Date.now()}_${imgFile.name}`)
-        await uploadBytes(imgRef, imgFile)
-        imageUrl = await getDownloadURL(imgRef)
-      }
+      if (imgFile) imageUrl = await uploadFile('images', `sliders/${Date.now()}_${imgFile.name}`, imgFile)
       const data = { ...form, imageUrl }
       if (editId) await updateDocument('sliders', editId, data)
       else await addDocument('sliders', data)
@@ -106,7 +100,7 @@ export default function ManageSlider() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Görsel *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Görsel</label>
                 <div className="flex items-start gap-3 mb-2">
                   <label className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg cursor-pointer text-sm transition-colors">
                     <FaImage size={14} /> Dosya Seç

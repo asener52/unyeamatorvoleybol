@@ -1,22 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useCollection, addDocument, updateDocument, deleteDocument } from '../../hooks/useFirestore'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { storage } from '../../firebase/config'
+import { supabase, uploadFile } from '../../lib/supabase'
 import { FaPlus, FaEdit, FaTrash, FaEye, FaEyeSlash, FaTimes, FaImage } from 'react-icons/fa'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
 
 const CATEGORIES = ['Duyuru', 'Başarı', 'Turnuva', 'Üyelik', 'Antrenman', 'Genel']
-
 const EMPTY_FORM = { title: '', summary: '', content: '', category: 'Genel', imageUrl: '', published: false }
 
 function formatDate(ts) {
   if (!ts) return ''
-  try {
-    const d = ts.toDate ? ts.toDate() : new Date(ts)
-    return format(d, 'd MMM yyyy', { locale: tr })
-  } catch { return '' }
+  try { return format(new Date(ts), 'd MMM yyyy', { locale: tr }) } catch { return '' }
 }
 
 export default function ManageNews() {
@@ -39,8 +34,7 @@ export default function ManageNews() {
   function handleImgChange(e) {
     const file = e.target.files[0]
     if (!file) return
-    setImgFile(file)
-    setImgPreview(URL.createObjectURL(file))
+    setImgFile(file); setImgPreview(URL.createObjectURL(file))
   }
 
   async function handleSubmit(e) {
@@ -48,11 +42,7 @@ export default function ManageNews() {
     setSaving(true)
     try {
       let imageUrl = form.imageUrl
-      if (imgFile) {
-        const imgRef = ref(storage, `news/${Date.now()}_${imgFile.name}`)
-        await uploadBytes(imgRef, imgFile)
-        imageUrl = await getDownloadURL(imgRef)
-      }
+      if (imgFile) imageUrl = await uploadFile('images', `news/${Date.now()}_${imgFile.name}`, imgFile)
       const data = { ...form, imageUrl }
       if (editId) await updateDocument('news', editId, data)
       else await addDocument('news', data)
@@ -85,7 +75,6 @@ export default function ManageNews() {
         </button>
       </div>
 
-      {/* Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-8">
@@ -105,7 +94,7 @@ export default function ManageNews() {
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">İçerik (HTML destekli)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">İçerik</label>
                 <textarea rows={6} value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none font-mono" />
               </div>
@@ -153,11 +142,8 @@ export default function ManageNews() {
         </div>
       )}
 
-      {/* Table */}
       {loading ? (
-        <div className="space-y-3">
-          {[...Array(5)].map((_, i) => <div key={i} className="h-16 bg-slate-200 animate-pulse rounded-xl" />)}
-        </div>
+        <div className="space-y-3">{[...Array(5)].map((_, i) => <div key={i} className="h-16 bg-slate-200 animate-pulse rounded-xl" />)}</div>
       ) : docs.length === 0 ? (
         <div className="text-center py-16 text-slate-400">Henüz haber eklenmemiş.</div>
       ) : (
