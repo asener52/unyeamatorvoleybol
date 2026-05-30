@@ -1,6 +1,48 @@
 import { useState, useEffect } from 'react'
 import { useSettings, saveSettings } from '../../hooks/useSettings'
-import { FaPlus, FaMinus, FaSave, FaCheckCircle } from 'react-icons/fa'
+import { uploadFile } from '../../lib/supabase'
+import { FaPlus, FaMinus, FaSave, FaCheckCircle, FaImage, FaUser, FaTimes } from 'react-icons/fa'
+
+// Ekip üyesi fotoğraf yükleme bileşeni
+function TeamImgUpload({ value, onChange }) {
+  const [uploading, setUploading] = useState(false)
+
+  async function handleFile(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const url = await uploadFile('gallery', file.name, file)
+      onChange(url)
+    } catch (err) {
+      alert('Yükleme hatası: ' + err.message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      {value ? (
+        <img src={value} alt="" className="w-10 h-10 rounded-full object-cover border-2 border-slate-200 shrink-0" />
+      ) : (
+        <div className="w-10 h-10 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center shrink-0">
+          <FaUser className="text-slate-300" size={14} />
+        </div>
+      )}
+      <label className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg cursor-pointer text-xs transition-colors whitespace-nowrap ${uploading ? 'bg-slate-200 text-slate-400' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>
+        <FaImage size={12} />
+        {uploading ? 'Yükleniyor...' : value ? 'Değiştir' : 'Fotoğraf Yükle'}
+        <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
+      </label>
+      {value && (
+        <button type="button" onClick={() => onChange('')} className="text-red-400 hover:text-red-600 p-0.5 shrink-0">
+          <FaTimes size={11} />
+        </button>
+      )}
+    </div>
+  )
+}
 
 export default function ManageSettings() {
   const { settings, loading } = useSettings()
@@ -244,14 +286,13 @@ export default function ManageSettings() {
         <Section title="Ekip Üyeleri">
           <div className="space-y-2">
             {form.team.map((m, i) => (
-              <div key={i} className="grid gap-2 items-center" style={{ gridTemplateColumns: '2fr 1fr 3fr auto' }}>
+              <div key={i} className="grid gap-2 items-center" style={{ gridTemplateColumns: '2fr 1fr auto auto' }}>
                 <input value={m.name} onChange={e => updateTeam(i, 'name', e.target.value)}
                   placeholder="Ad Soyad" className={input} />
                 <input value={m.role} onChange={e => updateTeam(i, 'role', e.target.value)}
                   placeholder="Görev" className={input} />
-                <input value={m.img} onChange={e => updateTeam(i, 'img', e.target.value)}
-                  placeholder="Fotoğraf URL" className={input} />
-                <button type="button" onClick={() => removeTeam(i)} className="text-red-400 hover:text-red-600 p-1.5 justify-self-center"><FaMinus size={13} /></button>
+                <TeamImgUpload value={m.img} onChange={val => updateTeam(i, 'img', val)} />
+                <button type="button" onClick={() => removeTeam(i)} className="text-red-400 hover:text-red-600 p-1.5"><FaMinus size={13} /></button>
               </div>
             ))}
             <button type="button" onClick={addTeam} className="flex items-center gap-1 text-primary-600 hover:text-primary-800 text-sm font-medium">
