@@ -67,7 +67,7 @@ export default function ManageGallery() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Başlık (isteğe bağlı)</label>
                 <input value={title} onChange={e => setTitle(e.target.value)}
-                  className="w-full bg-white text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                  className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Görsel *</label>
@@ -84,7 +84,7 @@ export default function ManageGallery() {
                 </label>
                 <input value={imgUrl} onChange={e => { setImgUrl(e.target.value); setImgPreview(e.target.value) }}
                   placeholder="ya da görsel URL yapıştırın"
-                  className="mt-2 w-full bg-white text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                  className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
               </div>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={published} onChange={e => setPublished(e.target.checked)}

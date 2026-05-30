@@ -78,18 +78,18 @@ export default function ManageSlider() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Başlık *</label>
                 <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                  className="w-full bg-white text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                  className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Alt Başlık</label>
                 <input value={form.subtitle} onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))}
-                  className="w-full bg-white text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                  className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Sıra</label>
                   <input type="number" value={form.order} onChange={e => setForm(f => ({ ...f, order: parseInt(e.target.value) || 0 }))}
-                    className="w-full bg-white text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                    className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
                 </div>
                 <div className="flex items-end">
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -110,7 +110,7 @@ export default function ManageSlider() {
                 </div>
                 <input value={form.imageUrl} onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))}
                   placeholder="ya da URL yapıştırın"
-                  className="w-full bg-white text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                  className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="submit" disabled={saving}

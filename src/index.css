@@ -25,16 +25,20 @@ body {
 .prose-content ul { list-style: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
 .prose-content li { margin: 0.25rem 0; }
 
-/* Form elemanları için global reset */
-input, textarea, select {
-  background-color: #ffffff;
-  color: #1e293b;
+/* Form elemanları — temel görünürlük */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+textarea,
+select {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
   font-size: 0.875rem;
   line-height: 1.5;
+  min-height: 2.5rem;
 }
 
 input::placeholder, textarea::placeholder {
-  color: #94a3b8;
+  color: #94a3b8 !important;
+  opacity: 1;
 }
 
 /* Admin sidebar transition */

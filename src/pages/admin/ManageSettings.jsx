@@ -269,7 +269,7 @@ export default function ManageSettings() {
   )
 }
 
-const input = 'w-full bg-white text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
+const input = 'w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
 
 function Section({ title, subtitle, children }) {
   return (

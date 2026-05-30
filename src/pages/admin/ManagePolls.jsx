@@ -82,7 +82,7 @@ export default function ManagePolls() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Soru *</label>
                 <textarea required rows={2} value={form.question} onChange={e => setForm(f => ({ ...f, question: e.target.value }))}
-                  className="w-full bg-white text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none" />
+                  className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none" />
               </div>
 
               <div>
@@ -96,7 +96,7 @@ export default function ManagePolls() {
                         value={opt.label}
                         onChange={e => updateOption(opt.id, e.target.value)}
                         placeholder={`Seçenek ${i + 1}`}
-                        className="flex-1 bg-white text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        className="flex-1 rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       />
                       {form.options.length > 2 && (
                         <button type="button" onClick={() => removeOption(opt.id)} className="text-red-400 hover:text-red-600 p-1.5">
