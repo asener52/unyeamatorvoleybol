@@ -168,12 +168,12 @@ export default function ManageSettings() {
         <Section title="İstatistik Barı" subtitle="Ana sayfada görüntülenecek sayılar (max 6)">
           <div className="space-y-2">
             {form.stats.map((s, i) => (
-              <div key={i} className="flex items-center gap-3">
+              <div key={i} className="grid gap-2 items-center" style={{ gridTemplateColumns: '1fr 3fr auto' }}>
                 <input value={s.value} onChange={e => updateStat(i, 'value', e.target.value)}
-                  placeholder="45+" className={`${input} w-28`} />
+                  placeholder="45+" className={input} />
                 <input value={s.label} onChange={e => updateStat(i, 'label', e.target.value)}
-                  placeholder="Aktif Üye" className={`${input} flex-1`} />
-                <button type="button" onClick={() => removeStat(i)} className="text-red-400 hover:text-red-600 p-1.5"><FaMinus size={13} /></button>
+                  placeholder="Aktif Üye" className={input} />
+                <button type="button" onClick={() => removeStat(i)} className="text-red-400 hover:text-red-600 p-1.5 justify-self-center"><FaMinus size={13} /></button>
               </div>
             ))}
             {form.stats.length < 6 && (
@@ -223,12 +223,12 @@ export default function ManageSettings() {
             <p className="text-sm font-medium text-slate-700 mb-2">Değerler (max 3)</p>
             <div className="space-y-2">
               {(form.about.values || []).map((v, i) => (
-                <div key={i} className="flex items-start gap-3">
+                <div key={i} className="grid gap-2 items-center" style={{ gridTemplateColumns: '1fr 2fr auto' }}>
                   <input value={v.title} onChange={e => updateValue(i, 'title', e.target.value)}
-                    placeholder="Başlık" className={`${input} w-36`} />
+                    placeholder="Başlık" className={input} />
                   <input value={v.text} onChange={e => updateValue(i, 'text', e.target.value)}
-                    placeholder="Açıklama" className={`${input} flex-1`} />
-                  <button type="button" onClick={() => removeValue(i)} className="text-red-400 hover:text-red-600 p-1.5 mt-0.5"><FaMinus size={13} /></button>
+                    placeholder="Açıklama" className={input} />
+                  <button type="button" onClick={() => removeValue(i)} className="text-red-400 hover:text-red-600 p-1.5 justify-self-center"><FaMinus size={13} /></button>
                 </div>
               ))}
               {(form.about.values || []).length < 3 && (
@@ -244,14 +244,14 @@ export default function ManageSettings() {
         <Section title="Ekip Üyeleri">
           <div className="space-y-2">
             {form.team.map((m, i) => (
-              <div key={i} className="flex items-center gap-3">
+              <div key={i} className="grid gap-2 items-center" style={{ gridTemplateColumns: '2fr 1fr 3fr auto' }}>
                 <input value={m.name} onChange={e => updateTeam(i, 'name', e.target.value)}
-                  placeholder="Ad Soyad" className={`${input} flex-1`} />
+                  placeholder="Ad Soyad" className={input} />
                 <input value={m.role} onChange={e => updateTeam(i, 'role', e.target.value)}
-                  placeholder="Görev" className={`${input} w-36`} />
+                  placeholder="Görev" className={input} />
                 <input value={m.img} onChange={e => updateTeam(i, 'img', e.target.value)}
-                  placeholder="Fotoğraf URL" className={`${input} flex-1`} />
-                <button type="button" onClick={() => removeTeam(i)} className="text-red-400 hover:text-red-600 p-1.5"><FaMinus size={13} /></button>
+                  placeholder="Fotoğraf URL" className={input} />
+                <button type="button" onClick={() => removeTeam(i)} className="text-red-400 hover:text-red-600 p-1.5 justify-self-center"><FaMinus size={13} /></button>
               </div>
             ))}
             <button type="button" onClick={addTeam} className="flex items-center gap-1 text-primary-600 hover:text-primary-800 text-sm font-medium">
