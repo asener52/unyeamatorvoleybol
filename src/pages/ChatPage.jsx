@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useMember } from '../contexts/MemberAuthContext'
+import { markMessagesRead } from '../hooks/useUnreadMessages'
 import { FaPaperPlane, FaUsers, FaUser, FaComments, FaSignInAlt } from 'react-icons/fa'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
@@ -34,6 +35,11 @@ export default function ChatPage() {
   const [activeDM, setActiveDM] = useState(null) // null = grup sohbeti
   const [showSidebar, setShowSidebar] = useState(false)
   const bottomRef = useRef(null)
+
+  // Sayfa açılınca okunmamışları sıfırla
+  useEffect(() => {
+    if (member) markMessagesRead(member.id)
+  }, [member])
 
   // Onaylı üyeleri yükle
   useEffect(() => {

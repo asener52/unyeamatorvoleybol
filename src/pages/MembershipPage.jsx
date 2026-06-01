@@ -3,7 +3,14 @@ import { supabase } from '../lib/supabase'
 import { hashPassword } from '../lib/crypto'
 import { FaVolleyballBall, FaUser, FaPhone, FaEnvelope, FaLock, FaCheckCircle, FaEye, FaEyeSlash } from 'react-icons/fa'
 
-const POSITIONS = ['Pasör', 'Libero', 'Fil', 'Dış Vurucu', 'Orta Oyuncu', 'Seyirci']
+const POSITIONS = [
+  'Pasör (Setter)',
+  'Pasör Çaprazı (Opposite)',
+  'Smaçör (Outside Hitter)',
+  'Orta Oyuncu / Orta Blokçu (Middle Blocker)',
+  'Libero',
+  'Defans Uzmanı',
+]
 
 function PasswordInput({ label, value, onChange, placeholder, required }) {
   const [show, setShow] = useState(false)

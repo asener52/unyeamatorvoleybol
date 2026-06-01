@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import {
   FaVolleyballBall, FaNewspaper, FaImages, FaCalendarAlt, FaPoll,
   FaChartBar, FaSignOutAlt, FaBars, FaTimes, FaHome, FaPhotoVideo,
-  FaCog, FaClipboardList, FaUsers, FaTrophy
+  FaCog, FaClipboardList, FaUsers, FaTrophy, FaComments
 } from 'react-icons/fa'
 
 const menuItems = [
@@ -17,6 +17,7 @@ const menuItems = [
   { to: '/admin/anketler', icon: FaPoll, label: 'Anketler' },
   { to: '/admin/uyeler', icon: FaUsers, label: 'Üye Başvuruları' },
   { to: '/admin/mac-talepleri', icon: FaClipboardList, label: 'Maç Talepleri' },
+  { to: '/admin/mesajlar', icon: FaComments, label: 'Mesajlar' },
   { to: '/admin/ayarlar', icon: FaCog, label: 'Site Ayarları' },
 ]
 

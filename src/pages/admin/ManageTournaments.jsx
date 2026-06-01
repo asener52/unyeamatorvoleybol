@@ -9,7 +9,14 @@ import {
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
 
-const POSITIONS = ['Pasör', 'Libero', 'Fil', 'Dış Vurucu', 'Orta Oyuncu']
+const POSITIONS = [
+  'Pasör (Setter)',
+  'Pasör Çaprazı (Opposite)',
+  'Smaçör (Outside Hitter)',
+  'Orta Oyuncu / Orta Blokçu (Middle Blocker)',
+  'Libero',
+  'Defans Uzmanı',
+]
 const STATUS_OPT = ['upcoming', 'active', 'completed']
 const STATUS_LABEL = { upcoming: 'Yaklaşan', active: 'Devam Ediyor', completed: 'Tamamlandı' }
 

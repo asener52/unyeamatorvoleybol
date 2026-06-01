@@ -3,12 +3,12 @@ import { useMember } from '../contexts/MemberAuthContext'
 import { FaVolleyballBall, FaPhone, FaEnvelope, FaSignOutAlt, FaComments, FaUser } from 'react-icons/fa'
 
 const POS_COLOR = {
-  'Pasör': 'bg-blue-100 text-blue-700',
+  'Pasör (Setter)': 'bg-blue-100 text-blue-700',
+  'Pasör Çaprazı (Opposite)': 'bg-indigo-100 text-indigo-700',
+  'Smaçör (Outside Hitter)': 'bg-green-100 text-green-700',
+  'Orta Oyuncu / Orta Blokçu (Middle Blocker)': 'bg-orange-100 text-orange-700',
   'Libero': 'bg-purple-100 text-purple-700',
-  'Fil': 'bg-red-100 text-red-700',
-  'Dış Vurucu': 'bg-green-100 text-green-700',
-  'Orta Oyuncu': 'bg-orange-100 text-orange-700',
-  'Seyirci': 'bg-slate-100 text-slate-600',
+  'Defans Uzmanı': 'bg-cyan-100 text-cyan-700',
 }
 
 export default function MemberProfilePage() {
