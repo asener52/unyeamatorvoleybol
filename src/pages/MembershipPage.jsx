@@ -1,11 +1,37 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { FaVolleyballBall, FaUser, FaPhone, FaEnvelope, FaCheckCircle } from 'react-icons/fa'
+import { hashPassword } from '../lib/crypto'
+import { FaVolleyballBall, FaUser, FaPhone, FaEnvelope, FaLock, FaCheckCircle, FaEye, FaEyeSlash } from 'react-icons/fa'
 
 const POSITIONS = ['Pasör', 'Libero', 'Fil', 'Dış Vurucu', 'Orta Oyuncu', 'Seyirci']
 
+function PasswordInput({ label, value, onChange, placeholder, required }) {
+  const [show, setShow] = useState(false)
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-slate-700 mb-1.5">{label}{required && ' *'}</label>
+      <div className="relative">
+        <FaLock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+        <input
+          required={required}
+          type={show ? 'text' : 'password'}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          minLength={6}
+          className="w-full pl-9 pr-10 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+        />
+        <button type="button" onClick={() => setShow(s => !s)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+          {show ? <FaEyeSlash size={14} /> : <FaEye size={14} />}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function MembershipPage() {
-  const [form, setForm] = useState({ name: '', phone: '', email: '', position: 'Dış Vurucu' })
+  const [form, setForm] = useState({ name: '', phone: '', email: '', position: 'Dış Vurucu', password: '', confirmPassword: '' })
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
@@ -13,13 +39,17 @@ export default function MembershipPage() {
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
+    if (form.password.length < 6) { setError('Şifre en az 6 karakter olmalıdır.'); return }
+    if (form.password !== form.confirmPassword) { setError('Şifreler eşleşmiyor.'); return }
     setSaving(true)
     try {
+      const password_hash = await hashPassword(form.password)
       const { error: err } = await supabase.from('members').insert([{
         name: form.name.trim(),
         phone: form.phone.trim(),
         email: form.email.trim() || null,
         position: form.position,
+        password_hash,
         status: 'bekliyor'
       }])
       if (err) throw err
@@ -36,7 +66,7 @@ export default function MembershipPage() {
       <div className="text-center max-w-sm">
         <FaCheckCircle className="text-green-500 text-6xl mx-auto mb-4" />
         <h2 className="text-2xl font-extrabold text-slate-800 mb-2">Başvurunuz Alındı!</h2>
-        <p className="text-slate-500">Yönetici başvurunuzu inceleyecek ve sizinle iletişime geçecek.</p>
+        <p className="text-slate-500">Yönetici başvurunuzu inceleyecek. Onaylandıktan sonra giriş yapabilirsiniz.</p>
       </div>
     </div>
   )
@@ -46,7 +76,7 @@ export default function MembershipPage() {
       <div className="text-center mb-10">
         <FaVolleyballBall className="text-gold-500 text-5xl mx-auto mb-4" />
         <h1 className="text-3xl font-extrabold text-primary-900 mb-2">Topluluğa Üye Ol</h1>
-        <p className="text-slate-500">Formı doldurun, yönetici onayından sonra aktif üye olursunuz.</p>
+        <p className="text-slate-500">Formu doldurun, yönetici onayından sonra giriş yapabilirsiniz.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 space-y-5">
@@ -86,14 +116,20 @@ export default function MembershipPage() {
             {POSITIONS.map(pos => (
               <button key={pos} type="button" onClick={() => setForm(f => ({ ...f, position: pos }))}
                 className={`py-2.5 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                  form.position === pos
-                    ? 'border-primary-600 bg-primary-50 text-primary-700'
-                    : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                  form.position === pos ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'
                 }`}>
                 {pos}
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="border-t border-slate-100 pt-4 space-y-4">
+          <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Giriş Bilgileri</p>
+          <PasswordInput label="Şifre" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+            placeholder="En az 6 karakter" required />
+          <PasswordInput label="Şifre Tekrar" value={form.confirmPassword} onChange={e => setForm(f => ({ ...f, confirmPassword: e.target.value }))}
+            placeholder="Şifrenizi tekrar girin" required />
         </div>
 
         {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>}
