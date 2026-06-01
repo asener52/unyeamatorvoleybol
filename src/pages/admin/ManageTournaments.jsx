@@ -13,6 +13,11 @@ const POSITIONS = ['Pasör', 'Libero', 'Fil', 'Dış Vurucu', 'Orta Oyuncu']
 const STATUS_OPT = ['upcoming', 'active', 'completed']
 const STATUS_LABEL = { upcoming: 'Yaklaşan', active: 'Devam Ediyor', completed: 'Tamamlandı' }
 
+// normalize() tarafından eklenen imageUrl/createdAt/id gibi alanları temizle
+function pick(obj, keys) {
+  return keys.reduce((acc, k) => { if (obj[k] !== undefined && obj[k] !== null) acc[k] = obj[k]; return acc }, {})
+}
+
 function formatDt(ts) {
   if (!ts) return ''
   try { return format(new Date(ts), 'd MMM yyyy HH:mm', { locale: tr }) } catch { return '' }
@@ -37,7 +42,14 @@ const inp = 'w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus
 
 // ─── Turnuva formu ─────────────────────────────────────────────────────────
 function TournamentForm({ initial, onSave, onClose }) {
-  const [form, setForm] = useState(initial || { name: '', description: '', start_date: '', end_date: '', status: 'upcoming', published: false })
+  const [form, setForm] = useState({
+    name: initial?.name || '',
+    description: initial?.description || '',
+    start_date: initial?.start_date || '',
+    end_date: initial?.end_date || '',
+    status: initial?.status || 'upcoming',
+    published: initial?.published ?? false,
+  })
   const [saving, setSaving] = useState(false)
   async function handleSubmit(e) {
     e.preventDefault(); setSaving(true)
@@ -70,7 +82,7 @@ function TournamentForm({ initial, onSave, onClose }) {
 
 // ─── Takım formu ───────────────────────────────────────────────────────────
 function TeamForm({ tournamentId, initial, onSave, onClose }) {
-  const [form, setForm] = useState(initial || { name: '', logo_url: '' })
+  const [form, setForm] = useState({ name: initial?.name || '', logo_url: initial?.logo_url || '' })
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
 
@@ -104,7 +116,12 @@ function TeamForm({ tournamentId, initial, onSave, onClose }) {
 
 // ─── Oyuncu formu ──────────────────────────────────────────────────────────
 function PlayerForm({ teamId, initial, onSave, onClose }) {
-  const [form, setForm] = useState(initial || { name: '', number: '', position: 'Dış Vurucu', photo_url: '' })
+  const [form, setForm] = useState({
+    name: initial?.name || '',
+    number: initial?.number?.toString() || '',
+    position: initial?.position || 'Dış Vurucu',
+    photo_url: initial?.photo_url || '',
+  })
   const [saving, setSaving] = useState(false)
   async function handleSubmit(e) {
     e.preventDefault(); setSaving(true)
@@ -130,7 +147,16 @@ function PlayerForm({ teamId, initial, onSave, onClose }) {
 
 // ─── Fikstür formu ─────────────────────────────────────────────────────────
 function FixtureForm({ tournamentId, teams, initial, onSave, onClose }) {
-  const [form, setForm] = useState(initial || { home_team_id: '', away_team_id: '', match_date: '', round: '', venue: '', home_score: '', away_score: '', status: 'scheduled' })
+  const [form, setForm] = useState({
+    home_team_id: initial?.home_team_id || '',
+    away_team_id: initial?.away_team_id || '',
+    match_date: initial?.match_date ? initial.match_date.slice(0, 16) : '',
+    round: initial?.round || '',
+    venue: initial?.venue || '',
+    home_score: initial?.home_score?.toString() ?? '',
+    away_score: initial?.away_score?.toString() ?? '',
+    status: initial?.status || 'scheduled',
+  })
   const [saving, setSaving] = useState(false)
   async function handleSubmit(e) {
     e.preventDefault(); setSaving(true)
@@ -205,8 +231,9 @@ export default function ManageTournaments() {
 
   // CRUD helpers
   async function saveTournament(data) {
-    if (modal?.data?.id) await supabase.from('tournaments').update(data).eq('id', modal.data.id)
-    else await supabase.from('tournaments').insert([data])
+    const clean = pick(data, ['name', 'description', 'start_date', 'end_date', 'status', 'published'])
+    if (modal?.data?.id) await supabase.from('tournaments').update(clean).eq('id', modal.data.id)
+    else { const { error } = await supabase.from('tournaments').insert([clean]); if (error) throw error }
   }
   async function deleteTournament(id) {
     if (!confirm('Turnuva ve tüm verileri silinecek. Emin misiniz?')) return
@@ -216,24 +243,31 @@ export default function ManageTournaments() {
     await supabase.from('tournaments').update({ published: !t.published }).eq('id', t.id)
   }
   async function saveTeam(data) {
-    if (modal?.data?.id) await supabase.from('teams').update(data).eq('id', modal.data.id)
-    else await supabase.from('teams').insert([data])
+    const clean = pick(data, ['tournament_id', 'name', 'logo_url'])
+    if (modal?.data?.id) { const { error } = await supabase.from('teams').update(clean).eq('id', modal.data.id); if (error) throw error }
+    else { const { error } = await supabase.from('teams').insert([clean]); if (error) throw error }
   }
   async function deleteTeam(id) {
     if (!confirm('Takım ve oyuncuları silinecek.')) return
     await supabase.from('teams').delete().eq('id', id)
   }
   async function savePlayer(data) {
-    if (modal?.data?.id) await supabase.from('players').update(data).eq('id', modal.data.id)
-    else await supabase.from('players').insert([data])
+    const clean = pick(data, ['team_id', 'name', 'number', 'position', 'photo_url'])
+    if (clean.number !== undefined) clean.number = clean.number ? parseInt(clean.number) : null
+    if (modal?.data?.id) { const { error } = await supabase.from('players').update(clean).eq('id', modal.data.id); if (error) throw error }
+    else { const { error } = await supabase.from('players').insert([clean]); if (error) throw error }
   }
   async function deletePlayer(id) {
     if (!confirm('Oyuncuyu sil?')) return
     await supabase.from('players').delete().eq('id', id)
   }
   async function saveFixture(data) {
-    if (modal?.data?.id) await supabase.from('fixtures').update(data).eq('id', modal.data.id)
-    else await supabase.from('fixtures').insert([data])
+    const clean = pick(data, ['tournament_id', 'home_team_id', 'away_team_id', 'home_score', 'away_score', 'match_date', 'round', 'venue', 'status'])
+    if (clean.home_score !== undefined) clean.home_score = clean.home_score !== '' ? parseInt(clean.home_score) : null
+    if (clean.away_score !== undefined) clean.away_score = clean.away_score !== '' ? parseInt(clean.away_score) : null
+    if (clean.match_date === '') clean.match_date = null
+    if (modal?.data?.id) { const { error } = await supabase.from('fixtures').update(clean).eq('id', modal.data.id); if (error) throw error }
+    else { const { error } = await supabase.from('fixtures').insert([clean]); if (error) throw error }
   }
   async function deleteFixture(id) {
     if (!confirm('Fikstürü sil?')) return
