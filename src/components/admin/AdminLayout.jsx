@@ -15,7 +15,7 @@ const menuItems = [
   { to: '/admin/etkinlikler', icon: FaCalendarAlt, label: 'Etkinlikler' },
   { to: '/admin/turnuvalar', icon: FaTrophy, label: 'Turnuvalar' },
   { to: '/admin/anketler', icon: FaPoll, label: 'Anketler' },
-  { to: '/admin/uyeler', icon: FaUsers, label: 'Üye Başvuruları' },
+  { to: '/admin/uyeler', icon: FaUsers, label: 'Üye Yönetimi' },
   { to: '/admin/mac-talepleri', icon: FaClipboardList, label: 'Maç Talepleri' },
   { to: '/admin/mesajlar', icon: FaComments, label: 'Mesajlar' },
   { to: '/admin/yoneticiler', icon: FaUserShield, label: 'Yöneticiler' },
@@ -39,7 +39,7 @@ export default function AdminLayout({ children }) {
       lg:translate-x-0 lg:static lg:z-auto
     `}>
       {/* Logo */}
-      <div className="flex items-center gap-2 px-6 py-5 border-b border-slate-700">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-700">
         <FaVolleyballBall className="text-gold-400 text-2xl" />
         <div>
           <div className="text-white font-bold text-sm leading-tight">Ünye Voleybol</div>
@@ -51,7 +51,7 @@ export default function AdminLayout({ children }) {
       </div>
 
       {/* Menu */}
-      <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+      <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto">
         {menuItems.map(({ to, icon: Icon, label, end }) => (
           <NavLink
             key={to}
@@ -62,7 +62,7 @@ export default function AdminLayout({ children }) {
             }
             onClick={() => setSidebarOpen(false)}
           >
-            <Icon size={17} />
+            <Icon size={14} />
             {label}
           </NavLink>
         ))}

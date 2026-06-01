@@ -43,7 +43,7 @@ input::placeholder, textarea::placeholder {
 
 /* Admin sidebar transition */
 .sidebar-link {
-  @apply flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-all duration-200;
+  @apply flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-all duration-200 text-sm;
 }
 
 .sidebar-link.active {
