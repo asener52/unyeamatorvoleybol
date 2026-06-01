@@ -146,6 +146,8 @@ function PlayerForm({ teamId, initial, onSave, onClose }) {
 }
 
 // ─── Fikstür formu ─────────────────────────────────────────────────────────
+const VALID_SCORES = ['3-0','3-1','3-2','0-3','1-3','2-3']
+
 function FixtureForm({ tournamentId, teams, initial, onSave, onClose }) {
   const [form, setForm] = useState({
     home_team_id: initial?.home_team_id || '',
@@ -155,20 +157,34 @@ function FixtureForm({ tournamentId, teams, initial, onSave, onClose }) {
     venue: initial?.venue || '',
     home_score: initial?.home_score?.toString() ?? '',
     away_score: initial?.away_score?.toString() ?? '',
+    set_details: initial?.set_details || '',
     status: initial?.status || 'scheduled',
   })
   const [saving, setSaving] = useState(false)
+
+  const hs = parseInt(form.home_score), as = parseInt(form.away_score)
+  const scoreKey = `${hs}-${as}`
+  const scoreValid = VALID_SCORES.includes(scoreKey)
+  const isTiebreak = scoreKey === '3-2' || scoreKey === '2-3'
+  const homeWins = hs === 3
+  const scoreSummary = scoreValid
+    ? (homeWins
+        ? `Ev sahibi kazandı · ${isTiebreak ? '2 puan (tie-break)' : '3 puan'}`
+        : `Misafir kazandı · ${isTiebreak ? '2 puan (tie-break)' : '3 puan'}`)
+    : (form.home_score !== '' && form.away_score !== '') ? '⚠ Geçersiz skor (3-0, 3-1, 3-2, 0-3, 1-3, 2-3 olmalı)' : ''
+
   async function handleSubmit(e) {
-    e.preventDefault(); setSaving(true)
+    e.preventDefault()
+    if (form.status === 'completed' && !scoreValid) { alert('Lütfen geçerli bir set skoru girin (3-0, 3-1, 3-2 veya tersi)'); return }
+    setSaving(true)
     try {
-      await onSave({
-        ...form,
-        tournament_id: tournamentId,
+      await onSave({ ...form, tournament_id: tournamentId,
         home_score: form.home_score !== '' ? parseInt(form.home_score) : null,
         away_score: form.away_score !== '' ? parseInt(form.away_score) : null,
       }); onClose()
     } catch (err) { alert(err.message) } finally { setSaving(false) }
   }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
@@ -187,23 +203,65 @@ function FixtureForm({ tournamentId, teams, initial, onSave, onClose }) {
           </select>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div><label className="text-xs text-slate-500 mb-1 block">Set Skoru (Ev)</label>
-          <input type="number" min="0" max="3" value={form.home_score} onChange={e => setForm(f => ({ ...f, home_score: e.target.value }))} placeholder="0-3" className={inp} /></div>
-        <div><label className="text-xs text-slate-500 mb-1 block">Set Skoru (Misafir)</label>
-          <input type="number" min="0" max="3" value={form.away_score} onChange={e => setForm(f => ({ ...f, away_score: e.target.value }))} placeholder="0-3" className={inp} /></div>
+
+      {/* Set skoru */}
+      <div>
+        <label className="text-xs text-slate-500 mb-2 block font-medium">Set Skoru (kazanan takım 3 set alır)</label>
+        <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
+          <div>
+            <div className="text-xs text-center text-slate-400 mb-1">Ev</div>
+            <div className="flex justify-center gap-1">
+              {[0,1,2,3].map(n => (
+                <button key={n} type="button"
+                  onClick={() => setForm(f => ({ ...f, home_score: n.toString(), status: (n === 3 || parseInt(f.away_score) === 3) ? 'completed' : f.status }))}
+                  className={`w-9 h-9 rounded-lg font-bold text-sm border-2 transition-all ${parseInt(form.home_score) === n ? 'border-primary-600 bg-primary-600 text-white' : 'border-slate-200 text-slate-600 hover:border-primary-300'}`}>
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="text-slate-400 font-bold text-lg text-center">-</div>
+          <div>
+            <div className="text-xs text-center text-slate-400 mb-1">Misafir</div>
+            <div className="flex justify-center gap-1">
+              {[0,1,2,3].map(n => (
+                <button key={n} type="button"
+                  onClick={() => setForm(f => ({ ...f, away_score: n.toString(), status: (parseInt(f.home_score) === 3 || n === 3) ? 'completed' : f.status }))}
+                  className={`w-9 h-9 rounded-lg font-bold text-sm border-2 transition-all ${parseInt(form.away_score) === n ? 'border-primary-600 bg-primary-600 text-white' : 'border-slate-200 text-slate-600 hover:border-primary-300'}`}>
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        {scoreSummary && (
+          <div className={`mt-2 text-xs px-3 py-1.5 rounded-lg ${scoreValid ? (isTiebreak ? 'bg-yellow-50 text-yellow-700' : 'bg-green-50 text-green-700') : 'bg-red-50 text-red-600'}`}>
+            {scoreSummary}
+          </div>
+        )}
       </div>
+
+      {/* Set detayları */}
+      <div>
+        <label className="text-xs text-slate-500 mb-1 block">Set Detayları <span className="text-slate-400">(isteğe bağlı — örn: 25-20, 25-18, 25-22)</span></label>
+        <input value={form.set_details} onChange={e => setForm(f => ({ ...f, set_details: e.target.value }))}
+          placeholder="25-20, 25-18, 25-22" className={inp} />
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <input value={form.round} onChange={e => setForm(f => ({ ...f, round: e.target.value }))} placeholder="Tur (örn: Hafta 1)" className={inp} />
         <input value={form.venue} onChange={e => setForm(f => ({ ...f, venue: e.target.value }))} placeholder="Konum/Salon" className={inp} />
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <input type="datetime-local" value={form.match_date} onChange={e => setForm(f => ({ ...f, match_date: e.target.value }))} className={inp} />
-        <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={inp}>
-          <option value="scheduled">Planlandı</option>
-          <option value="completed">Tamamlandı</option>
-          <option value="cancelled">İptal</option>
-        </select>
+        <div><label className="text-xs text-slate-500 mb-1 block">Tarih/Saat</label>
+          <input type="datetime-local" value={form.match_date} onChange={e => setForm(f => ({ ...f, match_date: e.target.value }))} className={inp} /></div>
+        <div><label className="text-xs text-slate-500 mb-1 block">Durum</label>
+          <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={inp}>
+            <option value="scheduled">Planlandı</option>
+            <option value="completed">Tamamlandı</option>
+            <option value="cancelled">İptal</option>
+          </select>
+        </div>
       </div>
       <div className="flex gap-2 pt-1">
         <button type="submit" disabled={saving} className="flex-1 bg-primary-700 hover:bg-primary-800 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg text-sm">{saving ? 'Kaydediliyor...' : 'Kaydet'}</button>
@@ -262,7 +320,7 @@ export default function ManageTournaments() {
     await supabase.from('players').delete().eq('id', id)
   }
   async function saveFixture(data) {
-    const clean = pick(data, ['tournament_id', 'home_team_id', 'away_team_id', 'home_score', 'away_score', 'match_date', 'round', 'venue', 'status'])
+    const clean = pick(data, ['tournament_id', 'home_team_id', 'away_team_id', 'home_score', 'away_score', 'set_details', 'match_date', 'round', 'venue', 'status'])
     if (clean.home_score !== undefined) clean.home_score = clean.home_score !== '' ? parseInt(clean.home_score) : null
     if (clean.away_score !== undefined) clean.away_score = clean.away_score !== '' ? parseInt(clean.away_score) : null
     if (clean.match_date === '') clean.match_date = null
@@ -274,26 +332,36 @@ export default function ManageTournaments() {
     await supabase.from('fixtures').delete().eq('id', id)
   }
 
-  // Standings calculation
+  // Voleybol puan kuralları: 3-0/3-1 → 3/0 puan, 3-2 → 2/1 puan
   function calcStandings(tournamentId) {
     const teams = allTeams.filter(t => t.tournament_id === tournamentId)
-    const fixtures = allFixtures.filter(f => f.tournament_id === tournamentId && f.status === 'completed')
+    const fixtures = allFixtures.filter(f => f.tournament_id === tournamentId && f.status === 'completed' && f.home_score != null && f.away_score != null)
     const map = {}
     teams.forEach(t => { map[t.id] = { ...t, played: 0, won: 0, lost: 0, sets_for: 0, sets_against: 0, points: 0 } })
     fixtures.forEach(f => {
-      const hs = f.home_score ?? 0, as = f.away_score ?? 0
+      const hs = parseInt(f.home_score), as = parseInt(f.away_score)
+      const isTiebreak = (hs === 3 && as === 2) || (hs === 2 && as === 3)
+      const homeWon = hs > as
       if (map[f.home_team_id]) {
-        map[f.home_team_id].played++; map[f.home_team_id].sets_for += hs; map[f.home_team_id].sets_against += as
-        if (hs > as) { map[f.home_team_id].won++; map[f.home_team_id].points += 3 }
-        else { map[f.home_team_id].lost++ }
+        map[f.home_team_id].played++
+        map[f.home_team_id].sets_for += hs; map[f.home_team_id].sets_against += as
+        if (homeWon) { map[f.home_team_id].won++; map[f.home_team_id].points += isTiebreak ? 2 : 3 }
+        else { map[f.home_team_id].lost++; map[f.home_team_id].points += isTiebreak ? 1 : 0 }
       }
       if (map[f.away_team_id]) {
-        map[f.away_team_id].played++; map[f.away_team_id].sets_for += as; map[f.away_team_id].sets_against += hs
-        if (as > hs) { map[f.away_team_id].won++; map[f.away_team_id].points += 3 }
-        else { map[f.away_team_id].lost++ }
+        map[f.away_team_id].played++
+        map[f.away_team_id].sets_for += as; map[f.away_team_id].sets_against += hs
+        if (!homeWon) { map[f.away_team_id].won++; map[f.away_team_id].points += isTiebreak ? 2 : 3 }
+        else { map[f.away_team_id].lost++; map[f.away_team_id].points += isTiebreak ? 1 : 0 }
       }
     })
-    return Object.values(map).sort((a, b) => b.points - a.points || b.won - a.won)
+    return Object.values(map).sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points
+      if (b.won !== a.won) return b.won - a.won
+      const aRatio = a.sets_against > 0 ? a.sets_for / a.sets_against : a.sets_for
+      const bRatio = b.sets_against > 0 ? b.sets_for / b.sets_against : b.sets_for
+      return bRatio - aRatio
+    })
   }
 
   return (
@@ -424,24 +492,35 @@ export default function ManageTournaments() {
                             {tFixtures.map(f => {
                               const home = allTeams.find(x => x.id === f.home_team_id)
                               const away = allTeams.find(x => x.id === f.away_team_id)
+                              const done = f.status === 'completed'
+                              const hs = f.home_score, as = f.away_score
+                              const homeWon = done && hs > as
+                              const isTB = done && ((hs === 3 && as === 2) || (hs === 2 && as === 3))
                               return (
-                                <div key={f.id} className="flex items-center gap-3 p-3 border border-slate-100 rounded-xl hover:bg-slate-50">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 font-semibold text-sm text-slate-800">
-                                      <span>{home?.name ?? '?'}</span>
-                                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${f.status === 'completed' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                                        {f.status === 'completed' ? `${f.home_score ?? '-'} - ${f.away_score ?? '-'}` : 'vs'}
-                                      </span>
-                                      <span>{away?.name ?? '?'}</span>
+                                <div key={f.id} className={`flex items-center gap-3 p-3 border rounded-xl ${done ? 'border-slate-200 bg-slate-50' : 'border-slate-100 hover:bg-slate-50'}`}>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <span className={`flex-1 text-right font-semibold truncate ${done && homeWon ? 'text-primary-700' : 'text-slate-700'}`}>{home?.name ?? '?'}</span>
+                                      {done ? (
+                                        <span className="shrink-0 bg-slate-800 text-white px-2.5 py-1 rounded-lg font-extrabold text-sm tracking-wider">
+                                          {hs} – {as}
+                                        </span>
+                                      ) : (
+                                        <span className="shrink-0 text-slate-400 text-xs font-semibold px-2">vs</span>
+                                      )}
+                                      <span className={`flex-1 font-semibold truncate ${done && !homeWon ? 'text-primary-700' : 'text-slate-700'}`}>{away?.name ?? '?'}</span>
                                     </div>
-                                    <div className="text-xs text-slate-400 mt-0.5">
-                                      {f.round && <span className="mr-2">{f.round}</span>}
+                                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-400 flex-wrap">
+                                      {done && isTB && <span className="bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-semibold">Tie-break</span>}
+                                      {done && <span className={`px-1.5 py-0.5 rounded font-semibold ${homeWon ? 'bg-primary-50 text-primary-700' : 'bg-slate-100 text-slate-600'}`}>{homeWon ? home?.name : away?.name} kazandı</span>}
+                                      {f.set_details && <span className="text-slate-400">🏐 {f.set_details}</span>}
+                                      {f.round && <span>{f.round}</span>}
                                       {f.match_date && <span>{formatDt(f.match_date)}</span>}
-                                      {f.venue && <span className="ml-2">📍 {f.venue}</span>}
+                                      {f.venue && <span>📍 {f.venue}</span>}
                                     </div>
                                   </div>
-                                  <button onClick={() => setModal({ type: 'fixture', data: f, tournamentId: t.id, teams: tTeams })} className="text-primary-600 hover:text-primary-800 p-1.5 hover:bg-primary-50 rounded-lg"><FaEdit size={13} /></button>
-                                  <button onClick={() => deleteFixture(f.id)} className="text-red-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded-lg"><FaTrash size={13} /></button>
+                                  <button onClick={() => setModal({ type: 'fixture', data: f, tournamentId: t.id, teams: tTeams })} className="text-primary-600 hover:text-primary-800 p-1.5 hover:bg-primary-50 rounded-lg shrink-0"><FaEdit size={13} /></button>
+                                  <button onClick={() => deleteFixture(f.id)} className="text-red-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded-lg shrink-0"><FaTrash size={13} /></button>
                                 </div>
                               )
                             })}

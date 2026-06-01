@@ -18,15 +18,32 @@ function formatDate(d) {
 const STATUS_CLS = { upcoming: 'bg-yellow-100 text-yellow-700', active: 'bg-green-100 text-green-700', completed: 'bg-slate-100 text-slate-600' }
 const STATUS_LBL = { upcoming: 'Yaklaşan', active: 'Devam Ediyor', completed: 'Tamamlandı' }
 
+// Voleybol puan kuralları: 3-0/3-1 → 3/0 puan, 3-2 → 2/1 puan
 function calcStandings(teams, fixtures) {
   const map = {}
   teams.forEach(t => { map[t.id] = { ...t, played: 0, won: 0, lost: 0, sets_for: 0, sets_against: 0, points: 0 } })
-  fixtures.filter(f => f.status === 'completed').forEach(f => {
-    const hs = f.home_score ?? 0, as = f.away_score ?? 0
-    if (map[f.home_team_id]) { map[f.home_team_id].played++; map[f.home_team_id].sets_for += hs; map[f.home_team_id].sets_against += as; if (hs > as) { map[f.home_team_id].won++; map[f.home_team_id].points += 3 } else map[f.home_team_id].lost++ }
-    if (map[f.away_team_id]) { map[f.away_team_id].played++; map[f.away_team_id].sets_for += as; map[f.away_team_id].sets_against += hs; if (as > hs) { map[f.away_team_id].won++; map[f.away_team_id].points += 3 } else map[f.away_team_id].lost++ }
+  fixtures.filter(f => f.status === 'completed' && f.home_score != null && f.away_score != null).forEach(f => {
+    const hs = parseInt(f.home_score), as = parseInt(f.away_score)
+    const isTiebreak = (hs === 3 && as === 2) || (hs === 2 && as === 3)
+    const homeWon = hs > as
+    if (map[f.home_team_id]) {
+      map[f.home_team_id].played++; map[f.home_team_id].sets_for += hs; map[f.home_team_id].sets_against += as
+      if (homeWon) { map[f.home_team_id].won++; map[f.home_team_id].points += isTiebreak ? 2 : 3 }
+      else { map[f.home_team_id].lost++; map[f.home_team_id].points += isTiebreak ? 1 : 0 }
+    }
+    if (map[f.away_team_id]) {
+      map[f.away_team_id].played++; map[f.away_team_id].sets_for += as; map[f.away_team_id].sets_against += hs
+      if (!homeWon) { map[f.away_team_id].won++; map[f.away_team_id].points += isTiebreak ? 2 : 3 }
+      else { map[f.away_team_id].lost++; map[f.away_team_id].points += isTiebreak ? 1 : 0 }
+    }
   })
-  return Object.values(map).sort((a, b) => b.points - a.points || b.won - a.won)
+  return Object.values(map).sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points
+    if (b.won !== a.won) return b.won - a.won
+    const aRatio = a.sets_against > 0 ? a.sets_for / a.sets_against : a.sets_for
+    const bRatio = b.sets_against > 0 ? b.sets_for / b.sets_against : b.sets_for
+    return bRatio - aRatio
+  })
 }
 
 // ─── Turnuva Detay ─────────────────────────────────────────────────────────
@@ -214,25 +231,50 @@ function FixtureRow({ f, teams }) {
   const home = teams.find(t => t.id === f.home_team_id)
   const away = teams.find(t => t.id === f.away_team_id)
   const done = f.status === 'completed'
+  const hs = f.home_score, as = f.away_score
+  const homeWon = done && hs > as
+  const awayWon = done && as > hs
+  const isTiebreak = done && ((hs === 3 && as === 2) || (hs === 2 && as === 3))
+
   return (
-    <div className="bg-white rounded-xl border border-slate-100 p-4 flex items-center gap-4">
-      <div className="flex-1 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 flex-1 justify-end">
-          {home?.logo_url && <img src={home.logo_url} alt="" className="w-7 h-7 rounded-full object-cover" />}
-          <span className="font-semibold text-slate-800 text-sm text-right">{home?.name ?? '?'}</span>
+    <div className={`bg-white rounded-xl border p-4 ${done ? 'border-slate-200' : 'border-slate-100'}`}>
+      {/* Üst: takımlar + skor */}
+      <div className="flex items-center gap-3">
+        {/* Ev sahibi */}
+        <div className={`flex items-center gap-2 flex-1 justify-end ${homeWon ? '' : 'opacity-60'}`}>
+          <span className={`font-bold text-sm text-right ${homeWon ? 'text-primary-800' : 'text-slate-600'}`}>{home?.name ?? '?'}</span>
+          {home?.logo_url && <img src={home.logo_url} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm shrink-0" />}
         </div>
-        <div className={`text-center px-3 py-1 rounded-lg font-bold text-sm shrink-0 ${done ? 'bg-slate-800 text-white min-w-[60px]' : 'bg-primary-50 text-primary-700 text-xs'}`}>
-          {done ? `${f.home_score ?? '-'} - ${f.away_score ?? '-'}` : 'vs'}
-        </div>
-        <div className="flex items-center gap-2 flex-1">
-          <span className="font-semibold text-slate-800 text-sm">{away?.name ?? '?'}</span>
-          {away?.logo_url && <img src={away.logo_url} alt="" className="w-7 h-7 rounded-full object-cover" />}
+
+        {/* Skor kutusu */}
+        {done ? (
+          <div className="shrink-0 flex flex-col items-center">
+            <div className="bg-slate-900 text-white px-4 py-1.5 rounded-xl font-extrabold text-lg tracking-widest">
+              {hs} – {as}
+            </div>
+            {isTiebreak && <span className="text-xs text-yellow-600 font-semibold mt-1">Tie-break</span>}
+          </div>
+        ) : (
+          <div className="shrink-0 bg-primary-50 text-primary-600 px-4 py-2 rounded-xl text-xs font-bold">VS</div>
+        )}
+
+        {/* Misafir */}
+        <div className={`flex items-center gap-2 flex-1 ${awayWon ? '' : 'opacity-60'}`}>
+          {away?.logo_url && <img src={away.logo_url} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm shrink-0" />}
+          <span className={`font-bold text-sm ${awayWon ? 'text-primary-800' : 'text-slate-600'}`}>{away?.name ?? '?'}</span>
         </div>
       </div>
-      <div className="text-right text-xs text-slate-400 shrink-0 space-y-0.5">
-        {f.round && <div className="font-medium text-slate-600">{f.round}</div>}
-        {f.match_date && <div className="flex items-center gap-1"><FaCalendarAlt size={10} />{formatDt(f.match_date)}</div>}
-        {f.venue && <div className="flex items-center gap-1"><FaMapMarkerAlt size={10} />{f.venue}</div>}
+
+      {/* Alt: set detayları + meta */}
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 justify-center">
+        {done && f.set_details && (
+          <span className="flex items-center gap-1 text-slate-500">
+            <FaVolleyballBall size={10} className="text-primary-400" /> {f.set_details}
+          </span>
+        )}
+        {f.round && <span className="font-medium text-slate-500">{f.round}</span>}
+        {f.match_date && <span className="flex items-center gap-1"><FaCalendarAlt size={10} />{formatDt(f.match_date)}</span>}
+        {f.venue && <span className="flex items-center gap-1"><FaMapMarkerAlt size={10} />{f.venue}</span>}
       </div>
     </div>
   )
