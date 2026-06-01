@@ -10,6 +10,7 @@ const POSITIONS = [
   'Orta Oyuncu / Orta Blokçu (Middle Blocker)',
   'Libero',
   'Defans Uzmanı',
+  'Seyirci',
 ]
 
 function PasswordInput({ label, value, onChange, placeholder, required }) {

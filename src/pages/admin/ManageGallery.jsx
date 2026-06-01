@@ -4,8 +4,50 @@ import { uploadFile } from '../../lib/supabase'
 import { FaPlus, FaTrash, FaEye, FaEyeSlash, FaTimes, FaImage, FaUpload, FaVideo, FaPlay } from 'react-icons/fa'
 
 function getYoutubeThumbnail(url) {
-  const m = url.match(/(?:v=|youtu\.be\/)([^&?/]+)/)
+  const m = url.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)
   return m ? `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg` : null
+}
+function isDirectVideo(url) {
+  return /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url)
+}
+function isImageUrl(url) {
+  return /\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i.test(url)
+}
+function detectUrlType(url) {
+  if (!url) return null
+  if (/youtube\.com|youtu\.be|vimeo\.com/.test(url)) return 'video'
+  if (isDirectVideo(url)) return 'video'
+  if (isImageUrl(url)) return 'image'
+  return null
+}
+
+function UrlPreview({ url, mediaType }) {
+  if (!url) return null
+  if (mediaType === 'video') {
+    const ytThumb = getYoutubeThumbnail(url)
+    if (ytThumb) return (
+      <div className="relative rounded-xl overflow-hidden mt-2 h-36">
+        <img src={ytThumb} alt="" className="w-full h-full object-cover" />
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+          <FaPlay className="text-white text-3xl drop-shadow" />
+        </div>
+        <span className="absolute bottom-2 left-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">YouTube</span>
+      </div>
+    )
+    if (isDirectVideo(url)) return (
+      <video src={url} controls preload="metadata" className="w-full rounded-xl mt-2 max-h-48">
+        Tarayıcınız video desteklemiyor.
+      </video>
+    )
+    return null
+  }
+  // image
+  return (
+    <div className="mt-2 rounded-xl overflow-hidden h-36">
+      <img src={url} alt="" className="w-full h-full object-cover"
+        onError={e => { e.currentTarget.parentElement.style.display = 'none' }} />
+    </div>
+  )
 }
 
 export default function ManageGallery() {
@@ -31,12 +73,10 @@ export default function ManageGallery() {
 
   function handleUrlChange(val) {
     setImgUrl(val)
-    if (type === 'video') {
-      const thumb = getYoutubeThumbnail(val)
-      setImgPreview(thumb || val)
-    } else {
-      setImgPreview(val)
-    }
+    // URL'den tür otomatik algıla
+    const detected = detectUrlType(val)
+    if (detected && detected !== type) setType(detected)
+    setImgPreview(val)
   }
 
   async function handleSubmit(e) {
@@ -105,28 +145,24 @@ export default function ManageGallery() {
               {type === 'image' ? (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Görsel *</label>
-                  <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-primary-400 hover:bg-primary-50 transition-colors overflow-hidden">
-                    {imgPreview ? <img src={imgPreview} alt="" className="w-full h-full object-cover" /> : (
-                      <div className="text-center"><FaUpload className="text-slate-400 text-2xl mx-auto mb-2" /><span className="text-slate-500 text-sm">Dosya seçmek için tıklayın</span></div>
-                    )}
-                    <input type="file" accept="image/*" className="hidden" onChange={handleImgChange} />
-                  </label>
+                  {!imgUrl && (
+                    <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-primary-400 hover:bg-primary-50 transition-colors overflow-hidden">
+                      {imgFile ? <img src={imgPreview} alt="" className="w-full h-full object-cover" /> : (
+                        <div className="text-center"><FaUpload className="text-slate-400 text-2xl mx-auto mb-2" /><span className="text-slate-500 text-sm">Dosya seçmek için tıklayın</span></div>
+                      )}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleImgChange} />
+                    </label>
+                  )}
                   <input value={imgUrl} onChange={e => handleUrlChange(e.target.value)} placeholder="ya da görsel URL yapıştırın"
                     className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                  {imgUrl && <UrlPreview url={imgUrl} mediaType="image" />}
                 </div>
               ) : (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Video URL * (YouTube veya doğrudan link)</label>
-                  <input value={imgUrl} onChange={e => handleUrlChange(e.target.value)} placeholder="https://youtube.com/watch?v=..."
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Video URL * <span className="text-slate-400 font-normal">(YouTube, MP4 veya doğrudan link)</span></label>
+                  <input value={imgUrl} onChange={e => handleUrlChange(e.target.value)} placeholder="https://youtube.com/watch?v=... veya https://example.com/video.mp4"
                     className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
-                  {imgPreview && (
-                    <div className="mt-2 relative rounded-xl overflow-hidden">
-                      <img src={imgPreview} alt="" className="w-full h-36 object-cover" />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                        <FaPlay className="text-white text-3xl" />
-                      </div>
-                    </div>
-                  )}
+                  {imgUrl && <UrlPreview url={imgUrl} mediaType="video" />}
                 </div>
               )}
 
