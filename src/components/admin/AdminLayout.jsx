@@ -3,7 +3,8 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   FaVolleyballBall, FaNewspaper, FaImages, FaCalendarAlt, FaPoll,
-  FaChartBar, FaSignOutAlt, FaBars, FaTimes, FaHome, FaPhotoVideo, FaCog, FaClipboardList
+  FaChartBar, FaSignOutAlt, FaBars, FaTimes, FaHome, FaPhotoVideo,
+  FaCog, FaClipboardList, FaUsers, FaTrophy
 } from 'react-icons/fa'
 
 const menuItems = [
@@ -12,7 +13,9 @@ const menuItems = [
   { to: '/admin/slider', icon: FaPhotoVideo, label: 'Slider' },
   { to: '/admin/galeri', icon: FaImages, label: 'Galeri' },
   { to: '/admin/etkinlikler', icon: FaCalendarAlt, label: 'Etkinlikler' },
+  { to: '/admin/turnuvalar', icon: FaTrophy, label: 'Turnuvalar' },
   { to: '/admin/anketler', icon: FaPoll, label: 'Anketler' },
+  { to: '/admin/uyeler', icon: FaUsers, label: 'Üye Başvuruları' },
   { to: '/admin/mac-talepleri', icon: FaClipboardList, label: 'Maç Talepleri' },
   { to: '/admin/ayarlar', icon: FaCog, label: 'Site Ayarları' },
 ]

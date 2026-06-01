@@ -7,9 +7,11 @@ const navLinks = [
   { to: '/', label: 'Ana Sayfa' },
   { to: '/haberler', label: 'Haberler' },
   { to: '/etkinlikler', label: 'Etkinlikler' },
+  { to: '/turnuvalar', label: 'Turnuvalar' },
   { to: '/galeri', label: 'Galeri' },
   { to: '/anketler', label: 'Anketler' },
   { to: '/hakkimizda', label: 'Hakkımızda' },
+  { to: '/uye-ol', label: 'Üye Ol' },
   { to: '/mac-kayit', label: 'Maça Katıl', highlight: true },
 ]
 

@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useCollection, addDocument, updateDocument, deleteDocument } from '../../hooks/useFirestore'
 import { FaPlus, FaEdit, FaTrash, FaEye, FaEyeSlash, FaTimes, FaMinus } from 'react-icons/fa'
 
-const EMPTY_FORM = { question: '', options: [{ id: 'o1', label: '' }, { id: 'o2', label: '' }], published: false }
+const EMPTY_FORM = { question: '', options: [{ id: 'o1', label: '' }, { id: 'o2', label: '' }], published: false, visibility: 'public' }
 
 function genId() { return 'o' + Math.random().toString(36).slice(2, 7) }
 
@@ -18,7 +18,7 @@ export default function ManagePolls() {
   function openNew() { setForm(EMPTY_FORM); setEditId(null); setShowForm(true) }
 
   function openEdit(doc) {
-    setForm({ question: doc.question, options: doc.options || [], published: doc.published ?? false })
+    setForm({ question: doc.question, options: doc.options || [], published: doc.published ?? false, visibility: doc.visibility || 'public' })
     setEditId(doc.id); setShowForm(true)
   }
 
@@ -39,7 +39,7 @@ export default function ManagePolls() {
     if (form.options.length < 2) { alert('En az 2 seçenek gerekli'); return }
     setSaving(true)
     try {
-      const data = { question: form.question, options: form.options, published: form.published, votes: {} }
+      const data = { question: form.question, options: form.options, published: form.published, visibility: form.visibility, votes: {} }
       if (editId) await updateDocument('polls', editId, data)
       else await addDocument('polls', data)
       setShowForm(false)
@@ -114,11 +114,21 @@ export default function ManagePolls() {
                 )}
               </div>
 
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={form.published} onChange={e => setForm(f => ({ ...f, published: e.target.checked }))}
-                  className="w-4 h-4 rounded text-primary-600" />
-                <span className="text-sm font-medium text-slate-700">Yayınla</span>
-              </label>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={form.published} onChange={e => setForm(f => ({ ...f, published: e.target.checked }))}
+                    className="w-4 h-4 rounded text-primary-600" />
+                  <span className="text-sm font-medium text-slate-700">Yayınla</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-slate-700">Görünürlük:</span>
+                  <select value={form.visibility} onChange={e => setForm(f => ({ ...f, visibility: e.target.value }))}
+                    className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <option value="public">Herkese Açık</option>
+                    <option value="members">Sadece Üyeler</option>
+                  </select>
+                </div>
+              </div>
 
               <div className="flex gap-3 pt-2">
                 <button type="submit" disabled={saving}

@@ -22,7 +22,11 @@ import ManageEvents from './pages/admin/ManageEvents'
 import ManagePolls from './pages/admin/ManagePolls'
 import ManageSettings from './pages/admin/ManageSettings'
 import ManageMatchRequests from './pages/admin/ManageMatchRequests'
+import ManageMembers from './pages/admin/ManageMembers'
+import ManageTournaments from './pages/admin/ManageTournaments'
 import MatchRequestPage from './pages/MatchRequestPage'
+import MembershipPage from './pages/MembershipPage'
+import TournamentPage from './pages/TournamentPage'
 
 function PublicLayout({ children }) {
   return (
@@ -47,6 +51,8 @@ function AdminPages() {
           <Route path="anketler" element={<ManagePolls />} />
           <Route path="ayarlar" element={<ManageSettings />} />
           <Route path="mac-talepleri" element={<ManageMatchRequests />} />
+          <Route path="uyeler" element={<ManageMembers />} />
+          <Route path="turnuvalar" element={<ManageTournaments />} />
         </Routes>
       </AdminLayout>
     </ProtectedRoute>
@@ -72,6 +78,9 @@ export default function App() {
           <Route path="/anketler" element={<PublicLayout><PollsPage /></PublicLayout>} />
           <Route path="/hakkimizda" element={<PublicLayout><AboutPage /></PublicLayout>} />
           <Route path="/mac-kayit" element={<PublicLayout><MatchRequestPage /></PublicLayout>} />
+          <Route path="/uye-ol" element={<PublicLayout><MembershipPage /></PublicLayout>} />
+          <Route path="/turnuvalar" element={<PublicLayout><TournamentPage /></PublicLayout>} />
+          <Route path="/turnuvalar/:id" element={<PublicLayout><TournamentPage /></PublicLayout>} />
         </Routes>
         </SettingsProvider>
       </AuthProvider>
