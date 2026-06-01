@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { SettingsProvider } from './contexts/SettingsContext'
+import { MemberAuthProvider } from './contexts/MemberAuthContext'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ProtectedRoute from './components/admin/ProtectedRoute'
@@ -12,6 +13,9 @@ import EventsPage from './pages/EventsPage'
 import GalleryPage from './pages/GalleryPage'
 import PollsPage from './pages/PollsPage'
 import AboutPage from './pages/AboutPage'
+import MemberLoginPage from './pages/MemberLoginPage'
+import MemberProfilePage from './pages/MemberProfilePage'
+import ChatPage from './pages/ChatPage'
 
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -64,24 +68,27 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <SettingsProvider>
-        <Routes>
-          {/* Admin routes */}
-          <Route path="/admin/giris" element={<AdminLogin />} />
-          <Route path="/admin/*" element={<AdminPages />} />
+          <MemberAuthProvider>
+            <Routes>
+              <Route path="/admin/giris" element={<AdminLogin />} />
+              <Route path="/admin/*" element={<AdminPages />} />
 
-          {/* Public routes */}
-          <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
-          <Route path="/haberler" element={<PublicLayout><NewsPage /></PublicLayout>} />
-          <Route path="/haberler/:id" element={<PublicLayout><NewsPage /></PublicLayout>} />
-          <Route path="/etkinlikler" element={<PublicLayout><EventsPage /></PublicLayout>} />
-          <Route path="/galeri" element={<PublicLayout><GalleryPage /></PublicLayout>} />
-          <Route path="/anketler" element={<PublicLayout><PollsPage /></PublicLayout>} />
-          <Route path="/hakkimizda" element={<PublicLayout><AboutPage /></PublicLayout>} />
-          <Route path="/mac-kayit" element={<PublicLayout><MatchRequestPage /></PublicLayout>} />
-          <Route path="/uye-ol" element={<PublicLayout><MembershipPage /></PublicLayout>} />
-          <Route path="/turnuvalar" element={<PublicLayout><TournamentPage /></PublicLayout>} />
-          <Route path="/turnuvalar/:id" element={<PublicLayout><TournamentPage /></PublicLayout>} />
-        </Routes>
+              <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
+              <Route path="/haberler" element={<PublicLayout><NewsPage /></PublicLayout>} />
+              <Route path="/haberler/:id" element={<PublicLayout><NewsPage /></PublicLayout>} />
+              <Route path="/etkinlikler" element={<PublicLayout><EventsPage /></PublicLayout>} />
+              <Route path="/galeri" element={<PublicLayout><GalleryPage /></PublicLayout>} />
+              <Route path="/anketler" element={<PublicLayout><PollsPage /></PublicLayout>} />
+              <Route path="/hakkimizda" element={<PublicLayout><AboutPage /></PublicLayout>} />
+              <Route path="/mac-kayit" element={<PublicLayout><MatchRequestPage /></PublicLayout>} />
+              <Route path="/uye-ol" element={<PublicLayout><MembershipPage /></PublicLayout>} />
+              <Route path="/uye-giris" element={<PublicLayout><MemberLoginPage /></PublicLayout>} />
+              <Route path="/profil" element={<PublicLayout><MemberProfilePage /></PublicLayout>} />
+              <Route path="/mesajlar" element={<PublicLayout><ChatPage /></PublicLayout>} />
+              <Route path="/turnuvalar" element={<PublicLayout><TournamentPage /></PublicLayout>} />
+              <Route path="/turnuvalar/:id" element={<PublicLayout><TournamentPage /></PublicLayout>} />
+            </Routes>
+          </MemberAuthProvider>
         </SettingsProvider>
       </AuthProvider>
     </BrowserRouter>
