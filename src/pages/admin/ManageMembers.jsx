@@ -1,4 +1,5 @@
-import { useCollection, updateDocument, deleteDocument } from '../../hooks/useFirestore'
+import { useCollection, deleteDocument } from '../../hooks/useFirestore'
+import { supabase } from '../../lib/supabase'
 import { FaTrash, FaCheck, FaTimes, FaPhone, FaEnvelope, FaUser } from 'react-icons/fa'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
@@ -23,7 +24,8 @@ export default function ManageMembers() {
   }
 
   async function setStatus(id, status) {
-    await updateDocument('members', id, { status })
+    const { error } = await supabase.from('members').update({ status }).eq('id', id)
+    if (error) alert('Hata: ' + error.message)
   }
 
   async function handleDelete(id) {
