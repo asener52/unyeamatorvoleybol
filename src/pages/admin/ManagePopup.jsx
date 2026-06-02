@@ -8,6 +8,7 @@ const DEFAULT = {
   content: '',
   imageUrl: '',
   buttonText: 'Tamam',
+  buttonLink: '',
   showEveryTime: true,
 }
 
@@ -143,12 +144,27 @@ export default function ManagePopup() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Buton Metni</label>
-            <input value={form.buttonText} onChange={e => setForm(f => ({ ...f, buttonText: e.target.value }))}
-              placeholder="Tamam"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Buton Metni</label>
+              <input value={form.buttonText} onChange={e => setForm(f => ({ ...f, buttonText: e.target.value }))}
+                placeholder="Tamam"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Buton Linki <span className="text-slate-400 font-normal">(isteğe bağlı)</span>
+              </label>
+              <input value={form.buttonLink} onChange={e => setForm(f => ({ ...f, buttonLink: e.target.value }))}
+                placeholder="https://..."
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
           </div>
+          {form.buttonLink && (
+            <p className="text-xs text-slate-400 -mt-2">
+              Butona tıklanınca bu link açılacak. Boş bırakılırsa sadece popup kapanır.
+            </p>
+          )}
         </div>
 
         {/* Önizleme */}
