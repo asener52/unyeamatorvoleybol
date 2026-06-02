@@ -73,9 +73,11 @@ export default function ManageGallery() {
 
   function handleUrlChange(val) {
     setImgUrl(val)
-    // URL'den tür otomatik algıla
-    const detected = detectUrlType(val)
-    if (detected && detected !== type) setType(detected)
+    // Panoramik seçildiyse otomatik tip algılamayı atla
+    if (type !== 'panoramic') {
+      const detected = detectUrlType(val)
+      if (detected && detected !== type) setType(detected)
+    }
     setImgPreview(val)
   }
 
