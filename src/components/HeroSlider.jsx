@@ -41,7 +41,7 @@ export default function HeroSlider() {
           key={slide.id}
           className={`absolute inset-0 transition-opacity duration-700 ${i === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
         >
-          <img src={slide.imageUrl} alt={slide.title} className="w-full h-full object-cover" />
+          <img src={slide.imageUrl} alt={slide.title} className="w-full h-full object-contain" />
           <div className="absolute inset-0 bg-gradient-to-t from-primary-900/80 via-primary-900/30 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-8 md:p-14">
             <div className="max-w-3xl">

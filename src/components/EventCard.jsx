@@ -22,11 +22,11 @@ export default function EventCard({ event }) {
   return (
     <div className="bg-white rounded-xl overflow-hidden shadow hover:shadow-lg transition-shadow duration-300 border border-slate-100 flex flex-col">
       {event.imageUrl && (
-        <div className="h-44 overflow-hidden">
+        <div className="overflow-hidden rounded-t-xl">
           <img
             src={event.imageUrl}
             alt={event.title}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+            className="w-full object-contain"
           />
         </div>
       )}

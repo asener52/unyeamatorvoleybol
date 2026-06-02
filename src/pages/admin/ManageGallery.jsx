@@ -143,18 +143,35 @@ export default function ManageGallery() {
               </div>
 
               {type === 'image' ? (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Görsel *</label>
-                  {!imgUrl && (
-                    <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-primary-400 hover:bg-primary-50 transition-colors overflow-hidden">
-                      {imgFile ? <img src={imgPreview} alt="" className="w-full h-full object-cover" /> : (
-                        <div className="text-center"><FaUpload className="text-slate-400 text-2xl mx-auto mb-2" /><span className="text-slate-500 text-sm">Dosya seçmek için tıklayın</span></div>
-                      )}
-                      <input type="file" accept="image/*" className="hidden" onChange={handleImgChange} />
-                    </label>
-                  )}
-                  <input value={imgUrl} onChange={e => handleUrlChange(e.target.value)} placeholder="ya da görsel URL yapıştırın"
-                    className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-slate-700">Görsel *</label>
+
+                  {/* Dosya yükleme */}
+                  <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-primary-400 hover:bg-primary-50 transition-colors overflow-hidden">
+                    {imgFile ? (
+                      <img src={imgPreview} alt="" className="w-full h-full object-contain" />
+                    ) : (
+                      <div className="text-center">
+                        <FaUpload className="text-slate-400 text-2xl mx-auto mb-2" />
+                        <span className="text-slate-500 text-sm font-medium">Dosya yüklemek için tıklayın</span>
+                        <p className="text-slate-400 text-xs mt-1">JPG, PNG, WebP, GIF</p>
+                      </div>
+                    )}
+                    <input type="file" accept="image/*" className="hidden" onChange={e => { handleImgChange(e); setImgUrl('') }} />
+                  </label>
+
+                  {/* Ya da URL */}
+                  <div className="relative flex items-center">
+                    <div className="flex-1 border-t border-slate-200" />
+                    <span className="mx-3 text-xs text-slate-400 font-medium">ya da URL girin</span>
+                    <div className="flex-1 border-t border-slate-200" />
+                  </div>
+                  <input
+                    value={imgUrl}
+                    onChange={e => { handleUrlChange(e.target.value); if (e.target.value) setImgFile(null) }}
+                    placeholder="https://example.com/gorsel.jpg"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
                   {imgUrl && <UrlPreview url={imgUrl} mediaType="image" />}
                 </div>
               ) : (

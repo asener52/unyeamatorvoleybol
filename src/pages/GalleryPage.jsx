@@ -37,9 +37,9 @@ export default function GalleryPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {images.map((img, idx) => (
             <div key={img.id}
-              className="group relative aspect-square overflow-hidden rounded-xl cursor-pointer shadow hover:shadow-lg"
+              className="group relative aspect-square overflow-hidden rounded-xl cursor-pointer shadow hover:shadow-lg bg-slate-100"
               onClick={() => setLightbox(idx)}>
-              <img src={img.url || img.imageUrl} alt={img.title || ''} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+              <img src={img.url || img.imageUrl} alt={img.title || ''} className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105" />
               {img.title && (
                 <div className="absolute inset-0 bg-primary-900/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
                   <span className="text-white text-sm font-semibold">{img.title}</span>

@@ -58,7 +58,7 @@ export default function MembershipPage() {
         email: form.email.trim() || null,
         position: form.position,
         password_hash,
-        status: 'bekliyor'
+        status: 'approved'
       }])
       if (err) throw err
       setDone(true)
