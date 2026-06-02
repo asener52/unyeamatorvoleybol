@@ -20,43 +20,48 @@ const SOCIAL_ICONS = {
 // ─── 360° Panoramik Viewer ─────────────────────────────────────────────────
 function PanoramaViewer({ src }) {
   const containerRef = useRef(null)
-  const imgRef = useRef(null)
-  const [offset, setOffset] = useState(0)
-  const [dragging, setDragging] = useState(false)
-  const [startX, setStartX] = useState(0)
-  const [startOffset, setStartOffset] = useState(0)
-  const [imgLoaded, setImgLoaded] = useState(false)
-  const [showHint, setShowHint] = useState(true)
-  const autoRef = useRef(null)
+  const autoRef    = useRef(null)
 
-  const maxOffset = useCallback(() => {
-    if (!containerRef.current || !imgRef.current) return 0
-    return Math.max(0, imgRef.current.naturalWidth *
-      (containerRef.current.clientHeight / imgRef.current.naturalHeight) -
-      containerRef.current.clientWidth)
-  }, [])
+  const [displayW, setDisplayW] = useState(0)   // resmin px cinsinden genişliği
+  const [maxScroll, setMaxScroll] = useState(0)  // kaydırılabilecek max px
+  const [offset,    setOffset]    = useState(0)
+  const [dragging,  setDragging]  = useState(false)
+  const [startX,    setStartX]    = useState(0)
+  const [startOff,  setStartOff]  = useState(0)
+  const [showHint,  setShowHint]  = useState(true)
+
+  // Resim yüklenince gerçek boyutları ölç, explicit px genişlik hesapla
+  function onImgLoad(e) {
+    const img = e.currentTarget
+    const ctn = containerRef.current
+    if (!ctn) return
+    const cH = ctn.clientHeight
+    const cW = ctn.clientWidth
+    const nW = img.naturalWidth
+    const nH = img.naturalHeight
+    if (!nH) return
+    const dw = Math.round(nW * (cH / nH))   // yüksekliğe sığdırılmış genişlik
+    setDisplayW(dw)
+    setMaxScroll(Math.max(0, dw - cW))
+  }
 
   // Otomatik yavaş kaydırma
-  const startAuto = useCallback(() => {
-    if (autoRef.current) clearInterval(autoRef.current)
+  function startAuto(scroll) {
+    clearInterval(autoRef.current)
+    if (scroll <= 0) return
     autoRef.current = setInterval(() => {
       setOffset(prev => {
-        const max = maxOffset()
-        if (max <= 0) return 0
         const next = prev - 0.5
-        return next < -max ? 0 : next
+        return next < -scroll ? 0 : next
       })
     }, 16)
-  }, [maxOffset])
-
-  const stopAuto = useCallback(() => {
-    if (autoRef.current) clearInterval(autoRef.current)
-  }, [])
+  }
+  function stopAuto() { clearInterval(autoRef.current) }
 
   useEffect(() => {
-    if (imgLoaded) startAuto()
+    if (maxScroll > 0) startAuto(maxScroll)
     return stopAuto
-  }, [imgLoaded, startAuto, stopAuto])
+  }, [maxScroll])
 
   useEffect(() => {
     const t = setTimeout(() => setShowHint(false), 3500)
@@ -65,66 +70,75 @@ function PanoramaViewer({ src }) {
 
   // Mouse
   const onMouseDown = e => {
-    stopAuto(); setDragging(true)
-    setStartX(e.clientX); setStartOffset(offset)
+    stopAuto()
+    setDragging(true); setStartX(e.clientX); setStartOff(offset)
   }
   const onMouseMove = e => {
     if (!dragging) return
-    const max = maxOffset()
-    setOffset(Math.min(0, Math.max(-max, startOffset + (e.clientX - startX))))
+    setOffset(o => Math.min(0, Math.max(-maxScroll, startOff + (e.clientX - startX))))
   }
-  const onMouseUp = () => { setDragging(false); startAuto() }
+  const onMouseUp = () => { setDragging(false); startAuto(maxScroll) }
 
   // Touch
   const onTouchStart = e => {
-    stopAuto(); setDragging(true)
-    setStartX(e.touches[0].clientX); setStartOffset(offset)
+    stopAuto()
+    setDragging(true); setStartX(e.touches[0].clientX); setStartOff(offset)
   }
   const onTouchMove = e => {
     if (!dragging) return
-    const max = maxOffset()
-    setOffset(Math.min(0, Math.max(-max, startOffset + (e.touches[0].clientX - startX))))
+    setOffset(o => Math.min(0, Math.max(-maxScroll, startOff + (e.touches[0].clientX - startX))))
   }
-  const onTouchEnd = () => { setDragging(false); startAuto() }
+  const onTouchEnd = () => { setDragging(false); startAuto(maxScroll) }
 
   return (
     <div
       ref={containerRef}
-      className="w-full h-full overflow-hidden relative select-none"
-      style={{ cursor: dragging ? 'grabbing' : 'grab' }}
-      onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
-      onMouseLeave={onMouseUp}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
+      onMouseDown={onMouseDown} onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}    onMouseLeave={onMouseUp}
+      onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+      style={{
+        width: '100%', height: '100%',
+        overflow: 'hidden', position: 'relative',
+        backgroundColor: '#000',
+        cursor: dragging ? 'grabbing' : 'grab',
+        userSelect: 'none',
+      }}
     >
-      <img
-        ref={imgRef}
-        src={src}
-        alt="360° Panorama"
-        draggable={false}
-        onLoad={() => setImgLoaded(true)}
-        style={{
-          height: '100%',
-          width: 'auto',
-          maxWidth: 'none',
-          transform: `translateX(${offset}px)`,
-          transition: dragging ? 'none' : 'transform 0.05s linear',
-          display: 'block',
-        }}
-      />
+      {/* Görünmez resim — boyut ölçmek için */}
+      {displayW === 0 && (
+        <img src={src} onLoad={onImgLoad} style={{ position: 'absolute', visibility: 'hidden', pointerEvents: 'none' }} alt="" />
+      )}
+
+      {/* Görünür, kaydırılan resim */}
+      {displayW > 0 && (
+        <img
+          src={src}
+          alt="360° Panorama"
+          draggable={false}
+          style={{
+            display: 'block',
+            width:  `${displayW}px`,
+            height: '100%',
+            maxWidth: 'none',        /* Tailwind'in max-width:100% ezmesini engelle */
+            transform: `translateX(${offset}px)`,
+            transition: dragging ? 'none' : 'transform 0.03s linear',
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+
       {/* İpucu */}
-      <div className={`absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/60 text-white text-sm px-4 py-2 rounded-full transition-opacity duration-700 pointer-events-none ${showHint ? 'opacity-100' : 'opacity-0'}`}>
-        <span>←</span>
-        <span>Panoramayı görmek için sürükleyin</span>
-        <span>→</span>
+      <div
+        style={{ transition: 'opacity 0.7s', opacity: showHint ? 1 : 0 }}
+        className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/60 text-white text-sm px-4 py-2 rounded-full pointer-events-none whitespace-nowrap"
+      >
+        <span>←</span><span>Panoramayı görmek için sürükleyin</span><span>→</span>
       </div>
-      {/* 360 rozeti */}
-      <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-primary-700/90 text-white text-xs font-bold px-2.5 py-1 rounded-full pointer-events-none">
+
+      {/* 360° rozeti */}
+      <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-primary-700/90 px-2.5 py-1 rounded-full pointer-events-none">
         <FaGlobeAmericas size={11} className="text-gold-400" />
-        <span className="text-gold-400">360°</span>
+        <span className="text-gold-400 text-xs font-bold">360°</span>
       </div>
     </div>
   )
