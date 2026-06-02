@@ -129,12 +129,12 @@ function MemberSelectForm({ teamId, tournamentId, allTeams, allPlayers, onSave, 
   const [selected, setSelected] = useState([])
   const [saving, setSaving] = useState(false)
 
-  // Bu turnuvadaki tüm takımlara kayıtlı member_id'leri bul
+  // Bu turnuvadaki tüm takımlara kayıtlı oyuncu adlarını bul
   const tournamentTeamIds = allTeams.filter(t => t.tournament_id === tournamentId).map(t => t.id)
-  const assignedMemberIds = new Set(
+  const assignedNames = new Set(
     allPlayers
-      .filter(p => tournamentTeamIds.includes(p.team_id) && p.member_id)
-      .map(p => p.member_id)
+      .filter(p => tournamentTeamIds.includes(p.team_id))
+      .map(p => p.name?.toLowerCase())
   )
 
   useEffect(() => {
@@ -144,7 +144,7 @@ function MemberSelectForm({ teamId, tournamentId, allTeams, allPlayers, onSave, 
   }, [])
 
   const filtered = members.filter(m =>
-    !assignedMemberIds.has(m.id) &&
+    !assignedNames.has(m.name?.toLowerCase()) &&
     m.name.toLowerCase().includes(search.toLowerCase())
   )
 
@@ -158,7 +158,7 @@ function MemberSelectForm({ teamId, tournamentId, allTeams, allPlayers, onSave, 
     try {
       const rows = members
         .filter(m => selected.includes(m.id))
-        .map(m => ({ team_id: teamId, member_id: m.id, name: m.name, position: m.position || '', number: null }))
+        .map(m => ({ team_id: teamId, name: m.name, position: m.position || '', number: null }))
       const { error } = await supabase.from('players').insert(rows)
       if (error) throw error
       onSave(); onClose()
