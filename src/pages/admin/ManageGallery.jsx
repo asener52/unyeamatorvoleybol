@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useCollection, addDocument, updateDocument, deleteDocument } from '../../hooks/useFirestore'
 import { uploadFile } from '../../lib/supabase'
-import { FaPlus, FaTrash, FaEye, FaEyeSlash, FaTimes, FaImage, FaUpload, FaVideo, FaPlay } from 'react-icons/fa'
+import { FaPlus, FaTrash, FaEye, FaEyeSlash, FaTimes, FaImage, FaUpload, FaVideo, FaPlay, FaGlobeAmericas } from 'react-icons/fa'
 
 function getYoutubeThumbnail(url) {
   const m = url.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)
@@ -127,8 +127,8 @@ export default function ManageGallery() {
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
 
               {/* Tür seçimi */}
-              <div className="grid grid-cols-2 gap-2">
-                {[['image', FaImage, 'Fotoğraf'], ['video', FaVideo, 'Video']].map(([val, Icon, label]) => (
+              <div className="grid grid-cols-3 gap-2">
+                {[['image', FaImage, 'Fotoğraf'], ['panoramic', FaGlobeAmericas, '360° / Pano'], ['video', FaVideo, 'Video']].map(([val, Icon, label]) => (
                   <button key={val} type="button" onClick={() => { setType(val); setImgUrl(''); setImgPreview(''); setImgFile(null) }}
                     className={`flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 text-sm font-semibold transition-all ${type === val ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200 text-slate-600'}`}>
                     <Icon size={14} /> {label}
@@ -142,7 +142,7 @@ export default function ManageGallery() {
                   className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
               </div>
 
-              {type === 'image' ? (
+              {(type === 'image' || type === 'panoramic') ? (
                 <div className="space-y-3">
                   <label className="block text-sm font-medium text-slate-700">Görsel *</label>
 
@@ -254,6 +254,7 @@ export default function ManageGallery() {
                 {d.title && <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs px-2 py-1 truncate">{d.title}</div>}
                 {!d.published && <div className="absolute top-2 left-2 bg-slate-700/80 text-white text-xs px-2 py-0.5 rounded">Taslak</div>}
                 {isVideo && <div className="absolute top-2 right-2 bg-red-600/80 text-white text-xs px-2 py-0.5 rounded">Video</div>}
+                {d.type === 'panoramic' && <div className="absolute top-2 right-2 bg-primary-700/90 text-white text-xs px-2 py-0.5 rounded font-semibold">360°</div>}
               </div>
             )
           })}
