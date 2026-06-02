@@ -30,6 +30,7 @@ import ManageMembers from './pages/admin/ManageMembers'
 import ManageTournaments from './pages/admin/ManageTournaments'
 import ManageMessages from './pages/admin/ManageMessages'
 import ManageAdmins from './pages/admin/ManageAdmins'
+import ManagePopup from './pages/admin/ManagePopup'
 import MatchRequestPage from './pages/MatchRequestPage'
 import MembershipPage from './pages/MembershipPage'
 import TournamentPage from './pages/TournamentPage'
@@ -61,6 +62,7 @@ function AdminPages() {
           <Route path="turnuvalar" element={<ManageTournaments />} />
           <Route path="mesajlar" element={<ManageMessages />} />
           <Route path="yoneticiler" element={<ManageAdmins />} />
+          <Route path="popup" element={<ManagePopup />} />
         </Routes>
       </AdminLayout>
     </ProtectedRoute>

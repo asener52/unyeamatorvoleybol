@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { uploadFile } from '../../lib/supabase'
 import { useCollection } from '../../hooks/useFirestore'
 import {
   FaPlus, FaEdit, FaTrash, FaTimes, FaChevronDown, FaChevronUp,
-  FaUsers, FaFutbol, FaTable, FaImage, FaVolleyballBall
+  FaUsers, FaFutbol, FaTable, FaImage, FaVolleyballBall, FaSearch, FaUserPlus
 } from 'react-icons/fa'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
@@ -118,6 +118,100 @@ function TeamForm({ tournamentId, initial, onSave, onClose }) {
         <button type="button" onClick={onClose} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg text-sm">İptal</button>
       </div>
     </form>
+  )
+}
+
+// ─── Üyelerden oyuncu seçimi ───────────────────────────────────────────────
+function MemberSelectForm({ teamId, tournamentId, allTeams, allPlayers, onSave, onClose }) {
+  const [members, setMembers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [selected, setSelected] = useState([])
+  const [saving, setSaving] = useState(false)
+
+  // Bu turnuvadaki tüm takımlara kayıtlı member_id'leri bul
+  const tournamentTeamIds = allTeams.filter(t => t.tournament_id === tournamentId).map(t => t.id)
+  const assignedMemberIds = new Set(
+    allPlayers
+      .filter(p => tournamentTeamIds.includes(p.team_id) && p.member_id)
+      .map(p => p.member_id)
+  )
+
+  useEffect(() => {
+    supabase.from('members').select('id, name, phone, position, role')
+      .eq('status', 'approved').order('name')
+      .then(({ data }) => { setMembers(data || []); setLoading(false) })
+  }, [])
+
+  const filtered = members.filter(m =>
+    !assignedMemberIds.has(m.id) &&
+    m.name.toLowerCase().includes(search.toLowerCase())
+  )
+
+  function toggle(id) {
+    setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id])
+  }
+
+  async function handleSave() {
+    if (!selected.length) { alert('En az bir üye seçin.'); return }
+    setSaving(true)
+    try {
+      const rows = members
+        .filter(m => selected.includes(m.id))
+        .map(m => ({ team_id: teamId, member_id: m.id, name: m.name, position: m.position || '', number: null }))
+      const { error } = await supabase.from('players').insert(rows)
+      if (error) throw error
+      onSave(); onClose()
+    } catch (err) { alert(err.message) } finally { setSaving(false) }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="relative">
+        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Üye ara..."
+          className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+      </div>
+
+      {loading ? (
+        <div className="text-center py-8 text-slate-400 text-sm">Yükleniyor...</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-8 text-slate-400 text-sm">
+          {search ? 'Sonuç bulunamadı.' : 'Eklenebilecek üye yok (tüm üyeler zaten takımlarda).'}
+        </div>
+      ) : (
+        <div className="max-h-72 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100">
+          {filtered.map(m => {
+            const isSelected = selected.includes(m.id)
+            return (
+              <label key={m.id} className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isSelected ? 'bg-primary-50' : 'hover:bg-slate-50'}`}>
+                <input type="checkbox" checked={isSelected} onChange={() => toggle(m.id)}
+                  className="w-4 h-4 rounded accent-primary-600" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-slate-800 text-sm">{m.name}</div>
+                  {m.position && <div className="text-xs text-slate-400 truncate">{m.position}</div>}
+                </div>
+                <span className="text-xs text-slate-400">{m.phone}</span>
+              </label>
+            )
+          })}
+        </div>
+      )}
+
+      {selected.length > 0 && (
+        <div className="text-xs text-primary-700 bg-primary-50 px-3 py-2 rounded-lg font-medium">
+          {selected.length} üye seçildi
+        </div>
+      )}
+
+      <div className="flex gap-2 pt-1">
+        <button type="button" onClick={handleSave} disabled={saving || !selected.length}
+          className="flex-1 bg-primary-700 hover:bg-primary-800 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg text-sm">
+          {saving ? 'Ekleniyor...' : 'Takıma Ekle'}
+        </button>
+        <button type="button" onClick={onClose} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg text-sm">İptal</button>
+      </div>
+    </div>
   )
 }
 
@@ -448,7 +542,8 @@ export default function ManageTournaments() {
                                     {team.logo_url ? <img src={team.logo_url} alt="" className="w-8 h-8 rounded-full object-cover" /> : <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center"><FaVolleyballBall className="text-primary-400" size={14} /></div>}
                                     <span className="font-semibold text-slate-800 flex-1">{team.name}</span>
                                     <span className="text-xs text-slate-400">{teamPlayers.length} oyuncu</span>
-                                    <button onClick={() => setModal({ type: 'player', teamId: team.id })} className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-800 px-2 py-1 bg-primary-50 rounded-lg"><FaPlus size={10} /> Oyuncu</button>
+                                    <button onClick={() => setModal({ type: 'memberSelect', teamId: team.id, tournamentId: t.id })} className="flex items-center gap-1 text-xs text-green-700 hover:text-green-900 px-2 py-1 bg-green-50 rounded-lg"><FaUserPlus size={10} /> Üyeden</button>
+                                    <button onClick={() => setModal({ type: 'player', teamId: team.id })} className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-800 px-2 py-1 bg-primary-50 rounded-lg"><FaPlus size={10} /> Manuel</button>
                                     <button onClick={() => setModal({ type: 'team', data: team, tournamentId: t.id })} className="text-primary-600 hover:text-primary-800 p-1.5 hover:bg-primary-50 rounded"><FaEdit size={13} /></button>
                                     <button onClick={() => deleteTeam(team.id)} className="text-red-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded"><FaTrash size={13} /></button>
                                   </div>
@@ -591,8 +686,20 @@ export default function ManageTournaments() {
           <TeamForm tournamentId={modal.tournamentId} initial={modal.data} onSave={saveTeam} onClose={() => setModal(null)} />
         </Modal>
       )}
+      {modal?.type === 'memberSelect' && (
+        <Modal title="Üyelerden Oyuncu Seç" onClose={() => setModal(null)}>
+          <MemberSelectForm
+            teamId={modal.teamId}
+            tournamentId={modal.tournamentId}
+            allTeams={allTeams}
+            allPlayers={allPlayers}
+            onSave={() => {}}
+            onClose={() => setModal(null)}
+          />
+        </Modal>
+      )}
       {modal?.type === 'player' && (
-        <Modal title={modal.data ? 'Oyuncuyu Düzenle' : 'Oyuncu Ekle'} onClose={() => setModal(null)}>
+        <Modal title={modal.data ? 'Oyuncuyu Düzenle' : 'Manuel Oyuncu Ekle'} onClose={() => setModal(null)}>
           <PlayerForm teamId={modal.teamId} initial={modal.data} onSave={savePlayer} onClose={() => setModal(null)} />
         </Modal>
       )}
