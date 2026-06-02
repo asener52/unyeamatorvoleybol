@@ -6,8 +6,19 @@ import { FaPlus, FaEdit, FaTrash, FaEye, FaEyeSlash, FaTimes, FaImage } from 're
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
 
-const EVENT_TYPES = ['Antrenman', 'Turnuva', 'Sosyal', 'Toplantı', 'Diğer']
-const EMPTY_FORM = { title: '', description: '', type: 'Antrenman', dateStr: '', time: '', location: '', capacity: '', imageUrl: '', published: false }
+const EVENT_TYPES = ['Antrenman', 'Maç', 'Turnuva', 'Sosyal', 'Toplantı', 'Diğer']
+const EMPTY_FORM = { title: '', description: '', type: 'Antrenman', dateStr: '', timeStart: '', timeEnd: '', location: '', capacity: '', imageUrl: '', published: false }
+
+function parseTimeRange(time) {
+  if (!time) return { timeStart: '', timeEnd: '' }
+  const parts = time.split(/\s*[-–]\s*/)
+  return { timeStart: parts[0]?.trim() || '', timeEnd: parts[1]?.trim() || '' }
+}
+function buildTimeRange(start, end) {
+  if (!start && !end) return ''
+  if (!end) return start
+  return `${start} - ${end}`
+}
 
 function formatDate(val) {
   if (!val) return ''
@@ -27,10 +38,11 @@ export default function ManageEvents() {
   function openNew() { setForm(EMPTY_FORM); setEditId(null); setImgPreview(''); setImgFile(null); setShowForm(true) }
 
   function openEdit(doc) {
+    const { timeStart, timeEnd } = parseTimeRange(doc.time)
     setForm({
       title: doc.title || '', description: doc.description || '', type: doc.type || 'Antrenman',
       dateStr: doc.date ? String(doc.date).slice(0, 10) : '',
-      time: doc.time || '', location: doc.location || '',
+      timeStart, timeEnd, location: doc.location || '',
       capacity: doc.capacity?.toString() || '',
       imageUrl: doc.imageUrl || '', published: doc.published ?? false
     })
@@ -52,7 +64,7 @@ export default function ManageEvents() {
       const data = {
         title: form.title, description: form.description, type: form.type,
         date: form.dateStr || null,
-        time: form.time, location: form.location,
+        time: buildTimeRange(form.timeStart, form.timeEnd), location: form.location,
         capacity: form.capacity ? parseInt(form.capacity) : null,
         imageUrl, published: form.published
       }
@@ -75,7 +87,7 @@ export default function ManageEvents() {
     await updateDocument('events', doc.id, { published: !doc.published })
   }
 
-  const typeColors = { 'Turnuva': 'bg-red-100 text-red-700', 'Antrenman': 'bg-blue-100 text-blue-700', 'Sosyal': 'bg-green-100 text-green-700', 'Toplantı': 'bg-yellow-100 text-yellow-700' }
+  const typeColors = { 'Turnuva': 'bg-red-100 text-red-700', 'Maç': 'bg-orange-100 text-orange-700', 'Antrenman': 'bg-blue-100 text-blue-700', 'Sosyal': 'bg-green-100 text-green-700', 'Toplantı': 'bg-yellow-100 text-yellow-700' }
 
   return (
     <div>
@@ -128,9 +140,14 @@ export default function ManageEvents() {
                     className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Saat</label>
-                  <input value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} placeholder="19:00 - 21:00"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Saat Aralığı</label>
+                  <div className="flex items-center gap-2">
+                    <input type="time" value={form.timeStart} onChange={e => setForm(f => ({ ...f, timeStart: e.target.value }))}
+                      className="flex-1 rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                    <span className="text-slate-400 font-medium shrink-0">–</span>
+                    <input type="time" value={form.timeEnd} onChange={e => setForm(f => ({ ...f, timeEnd: e.target.value }))}
+                      className="flex-1 rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                  </div>
                 </div>
               </div>
               <div>

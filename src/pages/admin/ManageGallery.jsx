@@ -84,7 +84,7 @@ export default function ManageGallery() {
     setSaving(true)
     try {
       let url = imgUrl
-      if (type === 'image' && imgFile) url = await uploadFile('gallery', imgFile.name, imgFile)
+      if (imgFile) url = await uploadFile('gallery', imgFile.name, imgFile)
       if (!url) { alert('Görsel/video seçin veya URL girin'); setSaving(false); return }
       await addDocument('gallery', { title, url, type, published })
       setShowForm(false); resetForm()
@@ -175,10 +175,38 @@ export default function ManageGallery() {
                   {imgUrl && <UrlPreview url={imgUrl} mediaType="image" />}
                 </div>
               ) : (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Video URL * <span className="text-slate-400 font-normal">(YouTube, MP4 veya doğrudan link)</span></label>
-                  <input value={imgUrl} onChange={e => handleUrlChange(e.target.value)} placeholder="https://youtube.com/watch?v=... veya https://example.com/video.mp4"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-slate-700">Video *</label>
+
+                  {/* Video dosya yükleme */}
+                  <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-primary-400 hover:bg-primary-50 transition-colors overflow-hidden">
+                    {imgFile ? (
+                      <div className="flex items-center gap-2 text-primary-700">
+                        <FaVideo size={18} />
+                        <span className="text-sm font-medium truncate max-w-[220px]">{imgFile.name}</span>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <FaUpload className="text-slate-400 text-2xl mx-auto mb-2" />
+                        <span className="text-slate-500 text-sm font-medium">Video dosyası yükleyin</span>
+                        <p className="text-slate-400 text-xs mt-1">MP4, WebM, MOV</p>
+                      </div>
+                    )}
+                    <input type="file" accept="video/*" className="hidden" onChange={e => { handleImgChange(e); setImgUrl('') }} />
+                  </label>
+
+                  {/* Ya da URL */}
+                  <div className="relative flex items-center">
+                    <div className="flex-1 border-t border-slate-200" />
+                    <span className="mx-3 text-xs text-slate-400 font-medium">ya da URL girin</span>
+                    <div className="flex-1 border-t border-slate-200" />
+                  </div>
+                  <input
+                    value={imgUrl}
+                    onChange={e => { handleUrlChange(e.target.value); if (e.target.value) setImgFile(null) }}
+                    placeholder="https://youtube.com/watch?v=... veya MP4 linki"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
                   {imgUrl && <UrlPreview url={imgUrl} mediaType="video" />}
                 </div>
               )}

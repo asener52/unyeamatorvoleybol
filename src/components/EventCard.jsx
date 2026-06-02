@@ -10,6 +10,7 @@ function formatDate(ts) {
 
 const typeColors = {
   'Turnuva': 'bg-red-100 text-red-700',
+  'Maç': 'bg-orange-100 text-orange-700',
   'Antrenman': 'bg-blue-100 text-blue-700',
   'Sosyal': 'bg-green-100 text-green-700',
   'Toplantı': 'bg-yellow-100 text-yellow-700',
