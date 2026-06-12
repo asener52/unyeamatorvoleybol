@@ -3,7 +3,7 @@ import { usePublishedCollection } from '../hooks/useFirestore'
 import { FaChevronLeft, FaChevronRight, FaVolleyballBall } from 'react-icons/fa'
 
 export default function HeroSlider() {
-  const { docs: slides, loading } = usePublishedCollection('sliders', 10)
+  const { docs: slides, loading } = usePublishedCollection('sliders', 10, 'order', true)
   const [current, setCurrent] = useState(0)
 
   const next = useCallback(() => {

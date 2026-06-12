@@ -14,7 +14,8 @@
       "Bash(Get-ChildItem -Path \"D:\\\\_App\\\\amator_voleybol\" -Recurse -Depth 2)",
       "Bash(Select-Object FullName)",
       "Bash(C:\\\\src\\\\flutter\\\\bin\\\\flutter.bat --version)",
-      "PowerShell(& \"C:\\\\src\\\\flutter\\\\bin\\\\flutter.bat\" --version 2>&1)"
+      "PowerShell(& \"C:\\\\src\\\\flutter\\\\bin\\\\flutter.bat\" --version 2>&1)",
+      "Bash(findstr /s /i \"slider\" \"D:\\\\_App\\\\amator_voleybol\\\\src\\\\*.jsx\" \"D:\\\\_App\\\\amator_voleybol\\\\src\\\\components\\\\*.jsx\")"
     ]
   }
 }

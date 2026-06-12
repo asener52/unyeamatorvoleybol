@@ -54,7 +54,7 @@ export function useCollection(tableName, orderField = 'created_at', limitCount =
   return { docs, loading, error }
 }
 
-export function usePublishedCollection(tableName, limitCount = 20) {
+export function usePublishedCollection(tableName, limitCount = 20, orderField = 'created_at', ascending = false) {
   const [docs, setDocs] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -63,7 +63,7 @@ export function usePublishedCollection(tableName, limitCount = 20) {
       .from(tableName)
       .select('*')
       .eq('published', true)
-      .order('created_at', { ascending: false })
+      .order(orderField, { ascending })
       .limit(limitCount)
 
     if (err) {
