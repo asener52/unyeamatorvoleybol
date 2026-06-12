@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useCollection, addDocument, updateDocument, deleteDocument } from '../../hooks/useFirestore'
 import { uploadFile } from '../../lib/supabase'
-import { FaPlus, FaEdit, FaTrash, FaEye, FaEyeSlash, FaTimes, FaImage } from 'react-icons/fa'
+import { FaPlus, FaEdit, FaTrash, FaEye, FaEyeSlash, FaTimes, FaImage, FaGripVertical, FaSave } from 'react-icons/fa'
 
 const EMPTY_FORM = { title: '', subtitle: '', imageUrl: '', published: false, order: 0 }
 
@@ -16,6 +16,54 @@ export default function ManageSlider() {
   const [imgFile, setImgFile] = useState(null)
   const [imgPreview, setImgPreview] = useState('')
 
+  // Sürükle-bırak sıralaması için yerel kopya
+  const [ordered, setOrdered] = useState([])
+  const [orderDirty, setOrderDirty] = useState(false)
+  const [savingOrder, setSavingOrder] = useState(false)
+  const dragIdx = useRef(null)
+  const dragOverIdx = useRef(null)
+
+  useEffect(() => {
+    setOrdered(docs)
+    setOrderDirty(false)
+  }, [docs])
+
+  /* ── Drag & Drop ─────────────────────────────── */
+  function onDragStart(i) {
+    dragIdx.current = i
+  }
+  function onDragOver(e, i) {
+    e.preventDefault()
+    dragOverIdx.current = i
+  }
+  function onDrop() {
+    const from = dragIdx.current
+    const to = dragOverIdx.current
+    if (from === null || to === null || from === to) return
+    const next = [...ordered]
+    const [moved] = next.splice(from, 1)
+    next.splice(to, 0, moved)
+    setOrdered(next)
+    setOrderDirty(true)
+    dragIdx.current = null
+    dragOverIdx.current = null
+  }
+
+  async function saveOrder() {
+    setSavingOrder(true)
+    try {
+      await Promise.all(
+        ordered.map((doc, i) => updateDocument('sliders', doc.id, { order: i }))
+      )
+      setOrderDirty(false)
+    } catch (err) {
+      alert('Sıralama kaydedilemedi: ' + err.message)
+    } finally {
+      setSavingOrder(false)
+    }
+  }
+
+  /* ── Form helpers ────────────────────────────── */
   function openNew() { setForm(EMPTY_FORM); setEditId(null); setImgPreview(''); setImgFile(null); setShowForm(true) }
 
   function openEdit(doc) {
@@ -37,7 +85,11 @@ export default function ManageSlider() {
       if (imgFile) imageUrl = await uploadFile('sliders', imgFile.name, imgFile)
       const data = { ...form, imageUrl }
       if (editId) await updateDocument('sliders', editId, data)
-      else await addDocument('sliders', data)
+      else {
+        // Yeni slide'ı en sona ekle
+        const maxOrder = ordered.length > 0 ? Math.max(...ordered.map(d => d.order ?? 0)) : -1
+        await addDocument('sliders', { ...data, order: maxOrder + 1 })
+      }
       setShowForm(false)
     } catch (err) {
       alert('Hata: ' + err.message)
@@ -60,13 +112,33 @@ export default function ManageSlider() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-800">Slider Yönetimi</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Ana sayfa slider görsellerini yönetin</p>
+          <p className="text-slate-500 text-sm mt-0.5">Ana sayfa slider görsellerini yönetin · sürükleyerek sıralayın</p>
         </div>
-        <button onClick={openNew} className="flex items-center gap-2 bg-primary-700 hover:bg-primary-800 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors">
-          <FaPlus size={13} /> Yeni Slide
-        </button>
+        <div className="flex items-center gap-2">
+          {orderDirty && (
+            <button
+              onClick={saveOrder}
+              disabled={savingOrder}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+            >
+              <FaSave size={13} /> {savingOrder ? 'Kaydediliyor...' : 'Sırayı Kaydet'}
+            </button>
+          )}
+          <button onClick={openNew} className="flex items-center gap-2 bg-primary-700 hover:bg-primary-800 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors">
+            <FaPlus size={13} /> Yeni Slide
+          </button>
+        </div>
       </div>
 
+      {/* Sürükle ipucu */}
+      {!loading && ordered.length > 1 && (
+        <div className="flex items-center gap-2 mb-4 text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+          <FaGripVertical size={11} />
+          <span>Kartları sürükleyerek sırasını değiştirebilirsiniz. Değişiklik sonrası <strong className="text-slate-600">Sırayı Kaydet</strong> butonuna basın.</span>
+        </div>
+      )}
+
+      {/* Form modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg my-8">
@@ -85,19 +157,12 @@ export default function ManageSlider() {
                 <input value={form.subtitle} onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))}
                   className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Sıra</label>
-                  <input type="number" value={form.order} onChange={e => setForm(f => ({ ...f, order: parseInt(e.target.value) || 0 }))}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
-                </div>
-                <div className="flex items-end">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={form.published} onChange={e => setForm(f => ({ ...f, published: e.target.checked }))}
-                      className="w-4 h-4 rounded text-primary-600" />
-                    <span className="text-sm font-medium text-slate-700">Yayınla</span>
-                  </label>
-                </div>
+              <div className="flex items-center">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={form.published} onChange={e => setForm(f => ({ ...f, published: e.target.checked }))}
+                    className="w-4 h-4 rounded text-primary-600" />
+                  <span className="text-sm font-medium text-slate-700">Yayınla</span>
+                </label>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Görsel</label>
@@ -131,26 +196,40 @@ export default function ManageSlider() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(3)].map((_, i) => <div key={i} className="h-44 bg-slate-200 animate-pulse rounded-2xl" />)}
         </div>
-      ) : docs.length === 0 ? (
+      ) : ordered.length === 0 ? (
         <div className="text-center py-16 text-slate-400">Henüz slide eklenmemiş.</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {docs.map(d => (
-            <div key={d.id} className="bg-white rounded-2xl overflow-hidden shadow border border-slate-100 hover:shadow-md transition-shadow">
+          {ordered.map((d, i) => (
+            <div
+              key={d.id}
+              draggable
+              onDragStart={() => onDragStart(i)}
+              onDragOver={e => onDragOver(e, i)}
+              onDrop={onDrop}
+              className="bg-white rounded-2xl overflow-hidden shadow border border-slate-100 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing active:ring-2 active:ring-primary-400 select-none"
+            >
               <div className="relative h-36 overflow-hidden bg-slate-100">
                 {d.imageUrl ? (
                   <img src={d.imageUrl} alt={d.title} className="w-full h-full object-cover" />
                 ) : (
                   <div className="flex items-center justify-center h-full text-slate-400"><FaImage size={32} /></div>
                 )}
+                {/* Sıra numarası */}
+                <span className="absolute top-2 left-2 bg-black/50 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
+                  {i + 1}
+                </span>
                 <button onClick={() => togglePublish(d)}
                   className={`absolute top-2 right-2 text-xs px-2 py-1 rounded-full font-semibold flex items-center gap-1 ${d.published ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
                   {d.published ? <><FaEye size={10} /> Yayında</> : <><FaEyeSlash size={10} /> Taslak</>}
                 </button>
               </div>
               <div className="p-4">
-                <div className="font-bold text-slate-800 text-sm truncate mb-0.5">{d.title}</div>
-                {d.subtitle && <div className="text-slate-500 text-xs truncate">{d.subtitle}</div>}
+                <div className="flex items-center gap-2 mb-0.5">
+                  <FaGripVertical size={13} className="text-slate-300 shrink-0" />
+                  <div className="font-bold text-slate-800 text-sm truncate">{d.title}</div>
+                </div>
+                {d.subtitle && <div className="text-slate-500 text-xs truncate pl-5">{d.subtitle}</div>}
                 <div className="flex justify-end gap-2 mt-3">
                   <button onClick={() => openEdit(d)} className="text-primary-600 hover:text-primary-800 p-1.5 hover:bg-primary-50 rounded-lg transition-colors"><FaEdit size={14} /></button>
                   <button onClick={() => handleDelete(d.id)} className="text-red-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded-lg transition-colors"><FaTrash size={14} /></button>

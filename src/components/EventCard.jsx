@@ -1,4 +1,5 @@
-import { FaCalendarAlt, FaMapMarkerAlt, FaClock, FaUsers } from 'react-icons/fa'
+import { useNavigate } from 'react-router-dom'
+import { FaCalendarAlt, FaMapMarkerAlt, FaClock, FaUsers, FaVolleyballBall } from 'react-icons/fa'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
 
@@ -17,20 +18,33 @@ const typeColors = {
 }
 
 export default function EventCard({ event }) {
+  const navigate = useNavigate()
   const dateStr = formatDate(event.date)
   const typeClass = typeColors[event.type] || 'bg-slate-100 text-slate-600'
+  const isMatch = event.type === 'Maç'
 
   return (
     <div className="bg-white rounded-xl overflow-hidden shadow hover:shadow-lg transition-shadow duration-300 border border-slate-100 flex flex-col">
       {event.imageUrl && (
-        <div className="overflow-hidden rounded-t-xl">
+        <div
+          className={`overflow-hidden rounded-t-xl relative group ${isMatch ? 'cursor-pointer' : ''}`}
+          onClick={isMatch ? () => navigate('/mac-katil', { state: { eventId: event.id, eventTitle: event.title } }) : undefined}
+        >
           <img
             src={event.imageUrl}
             alt={event.title}
-            className="w-full object-contain"
+            className={`w-full object-contain transition-transform duration-300 ${isMatch ? 'group-hover:scale-105' : ''}`}
           />
+          {isMatch && (
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-2 bg-primary-700 hover:bg-primary-800 text-white font-bold text-sm px-5 py-2.5 rounded-full shadow-lg">
+                <FaVolleyballBall size={14} /> Maça Katıl
+              </span>
+            </div>
+          )}
         </div>
       )}
+
       <div className="p-5 flex flex-col flex-1">
         <div className="flex items-start justify-between gap-2 mb-3">
           <h3 className="font-bold text-slate-800 text-lg leading-snug">{event.title}</h3>
@@ -71,6 +85,16 @@ export default function EventCard({ event }) {
             </div>
           )}
         </div>
+
+        {/* Görsel yoksa Maç kartının altında buton göster */}
+        {isMatch && !event.imageUrl && (
+          <button
+            onClick={() => navigate('/mac-katil', { state: { eventId: event.id, eventTitle: event.title } })}
+            className="mt-4 flex items-center justify-center gap-2 w-full bg-primary-700 hover:bg-primary-800 text-white font-bold text-sm py-2.5 rounded-xl transition-colors"
+          >
+            <FaVolleyballBall size={14} /> Maça Katıl
+          </button>
+        )}
       </div>
     </div>
   )

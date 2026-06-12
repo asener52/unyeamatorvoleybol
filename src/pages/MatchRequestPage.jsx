@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { FaVolleyballBall, FaUser, FaPhone, FaCheckCircle, FaCalendarAlt } from 'react-icons/fa'
 import { format } from 'date-fns'
@@ -10,7 +11,13 @@ function formatEventDate(dateStr) {
 }
 
 export default function MatchRequestPage() {
-  const [form, setForm] = useState({ name: '', phone: '', type: 'oyuncu', event_id: '', event_title: '' })
+  const location = useLocation()
+  const preSelected = location.state || {}
+  const [form, setForm] = useState({
+    name: '', phone: '', type: 'oyuncu',
+    event_id: preSelected.eventId || '',
+    event_title: preSelected.eventTitle || '',
+  })
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
