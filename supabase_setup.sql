@@ -24,6 +24,7 @@ create table if not exists public.sliders (
   image_url text,
   published boolean default false,
   "order" integer default 0,
+  fit text default 'cover',
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
