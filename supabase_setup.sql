@@ -58,8 +58,22 @@ create table if not exists public.polls (
   options jsonb default '[]'::jsonb,
   votes jsonb default '{}'::jsonb,
   published boolean default false,
+  visibility text default 'public',
+  event_id bigint,
+  event_title text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
+);
+
+create table if not exists public.match_requests (
+  id uuid default gen_random_uuid() primary key,
+  name text not null,
+  phone text not null,
+  type text default 'oyuncu',
+  status text default 'bekliyor',
+  event_id bigint,
+  event_title text,
+  created_at timestamptz default now()
 );
 
 create table if not exists public.settings (
@@ -79,6 +93,7 @@ alter table public.sliders enable row level security;
 alter table public.gallery enable row level security;
 alter table public.events enable row level security;
 alter table public.polls enable row level security;
+alter table public.match_requests enable row level security;
 alter table public.settings enable row level security;
 
 -- Herkes yayımdaki içerikleri okuyabilir
@@ -98,6 +113,8 @@ create policy "admin_all_sliders" on public.sliders for all using (auth.role() =
 create policy "admin_all_gallery" on public.gallery for all using (auth.role() = 'authenticated');
 create policy "admin_all_events" on public.events for all using (auth.role() = 'authenticated');
 create policy "admin_all_polls" on public.polls for all using (auth.role() = 'authenticated');
+create policy "public_insert_match_requests" on public.match_requests for insert with check (true);
+create policy "admin_all_match_requests" on public.match_requests for all using (auth.role() = 'authenticated');
 create policy "admin_all_settings" on public.settings for all using (auth.role() = 'authenticated');
 
 -- =============================================
