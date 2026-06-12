@@ -92,6 +92,7 @@ export default function ManageMatchRequests() {
                 <th className="text-left px-4 py-3 font-semibold text-slate-600">Ad Soyad</th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600">Telefon</th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600 hidden sm:table-cell">Tür</th>
+                <th className="text-left px-4 py-3 font-semibold text-slate-600 hidden lg:table-cell">Maç</th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600 hidden md:table-cell">Tarih</th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600">Durum</th>
                 <th className="text-right px-4 py-3 font-semibold text-slate-600">İşlem</th>
@@ -121,6 +122,12 @@ export default function ManageMatchRequests() {
                         {d.type === 'oyuncu' ? <FaVolleyballBall size={10} /> : '👁'}
                         {d.type === 'oyuncu' ? 'Oyuncu' : 'Seyirci'}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      {d.event_title
+                        ? <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full font-medium">{d.event_title}</span>
+                        : <span className="text-slate-300 text-xs">—</span>
+                      }
                     </td>
                     <td className="px-4 py-3 text-slate-400 text-xs hidden md:table-cell">{formatDate(d.createdAt)}</td>
                     <td className="px-4 py-3">

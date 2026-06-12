@@ -1,9 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { supabase } from '../../lib/supabase'
 import { useCollection, addDocument, updateDocument, deleteDocument } from '../../hooks/useFirestore'
-import { FaPlus, FaEdit, FaTrash, FaEye, FaEyeSlash, FaTimes, FaMinus } from 'react-icons/fa'
+import { FaPlus, FaEdit, FaTrash, FaEye, FaEyeSlash, FaTimes, FaMinus, FaCalendarAlt } from 'react-icons/fa'
 
-const EMPTY_FORM = { question: '', options: [{ id: 'o1', label: '' }, { id: 'o2', label: '' }], published: false, visibility: 'public' }
+const EMPTY_FORM = {
+  question: '',
+  options: [{ id: 'o1', label: '' }, { id: 'o2', label: '' }],
+  published: false,
+  visibility: 'public',
+  event_id: '',
+  event_title: '',
+}
 
 function genId() { return 'o' + Math.random().toString(36).slice(2, 7) }
 
@@ -14,11 +22,29 @@ export default function ManagePolls() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [editId, setEditId] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [events, setEvents] = useState([])
+
+  useEffect(() => {
+    supabase
+      .from('events')
+      .select('id, title, date, type')
+      .eq('published', true)
+      .order('date', { ascending: false })
+      .limit(50)
+      .then(({ data }) => setEvents(data || []))
+  }, [])
 
   function openNew() { setForm(EMPTY_FORM); setEditId(null); setShowForm(true) }
 
   function openEdit(doc) {
-    setForm({ question: doc.question, options: doc.options || [], published: doc.published ?? false, visibility: doc.visibility || 'public' })
+    setForm({
+      question: doc.question,
+      options: doc.options || [],
+      published: doc.published ?? false,
+      visibility: doc.visibility || 'public',
+      event_id: doc.event_id || '',
+      event_title: doc.event_title || '',
+    })
     setEditId(doc.id); setShowForm(true)
   }
 
@@ -34,12 +60,29 @@ export default function ManagePolls() {
     setForm(f => ({ ...f, options: f.options.map(o => o.id === id ? { ...o, label } : o) }))
   }
 
+  function handleEventChange(e) {
+    const selectedId = e.target.value
+    const selectedEvent = events.find(ev => ev.id === selectedId)
+    setForm(f => ({
+      ...f,
+      event_id: selectedId,
+      event_title: selectedEvent ? selectedEvent.title : '',
+    }))
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     if (form.options.length < 2) { alert('En az 2 seçenek gerekli'); return }
     setSaving(true)
     try {
-      const data = { question: form.question, options: form.options, published: form.published, visibility: form.visibility, votes: {} }
+      const data = {
+        question: form.question,
+        options: form.options,
+        published: form.published,
+        visibility: form.visibility,
+        votes: {},
+        ...(form.event_id ? { event_id: form.event_id, event_title: form.event_title } : { event_id: null, event_title: null }),
+      }
       if (editId) await updateDocument('polls', editId, data)
       else await addDocument('polls', data)
       setShowForm(false)
@@ -114,6 +157,25 @@ export default function ManagePolls() {
                 )}
               </div>
 
+              {/* Etkinlik Bağlantısı */}
+              <div>
+                <label className="flex items-center gap-1.5 text-sm font-medium text-slate-700 mb-1">
+                  <FaCalendarAlt size={12} /> Etkinlik Bağlantısı <span className="text-slate-400 font-normal">(isteğe bağlı)</span>
+                </label>
+                <select
+                  value={form.event_id}
+                  onChange={handleEventChange}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">— Etkinlik seçme</option>
+                  {events.map(ev => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.title} {ev.date ? `(${ev.date})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={form.published} onChange={e => setForm(f => ({ ...f, published: e.target.checked }))}
@@ -157,7 +219,14 @@ export default function ManagePolls() {
               <div key={d.id} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex items-center gap-4">
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-slate-800 truncate">{d.question}</p>
-                  <p className="text-sm text-slate-400 mt-0.5">{d.options?.length || 0} seçenek · {totalVotes} oy</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-sm text-slate-400">{d.options?.length || 0} seçenek · {totalVotes} oy</p>
+                    {d.event_title && (
+                      <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                        <FaCalendarAlt size={9} /> {d.event_title}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button onClick={() => togglePublish(d)}
