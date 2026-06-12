@@ -22,7 +22,7 @@ function denormalize(data) {
   return r
 }
 
-export function useCollection(tableName, orderField = 'created_at', limitCount = 50) {
+export function useCollection(tableName, orderField = 'created_at', limitCount = 50, ascending = false) {
   const [docs, setDocs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -31,13 +31,13 @@ export function useCollection(tableName, orderField = 'created_at', limitCount =
     const { data, error: err } = await supabase
       .from(tableName)
       .select('*')
-      .order(orderField, { ascending: false })
+      .order(orderField, { ascending })
       .limit(limitCount)
 
     if (err) { setError(err.message); setLoading(false); return }
     setDocs((data || []).map(normalize))
     setLoading(false)
-  }, [tableName, orderField, limitCount])
+  }, [tableName, orderField, limitCount, ascending])
 
   useEffect(() => {
     fetchData()
@@ -73,7 +73,7 @@ export function usePublishedCollection(tableName, limitCount = 20, orderField = 
     }
     setDocs((data || []).map(normalize))
     setLoading(false)
-  }, [tableName, limitCount])
+  }, [tableName, limitCount, orderField, ascending])
 
   useEffect(() => {
     fetchData()

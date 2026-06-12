@@ -4,11 +4,17 @@ import { useCollection, addDocument, updateDocument, deleteDocument } from '../.
 import { uploadFile } from '../../lib/supabase'
 import { FaPlus, FaEdit, FaTrash, FaEye, FaEyeSlash, FaTimes, FaImage, FaGripVertical, FaSave } from 'react-icons/fa'
 
-const EMPTY_FORM = { title: '', subtitle: '', imageUrl: '', published: false, order: 0 }
+const EMPTY_FORM = { title: '', subtitle: '', imageUrl: '', published: false, order: 0, fit: 'cover' }
+
+const FIT_OPTIONS = [
+  { value: 'cover',   label: 'Kaplama',     desc: 'Alanı tamamen doldurur, kenarlar kesilebilir',  preview: 'object-cover' },
+  { value: 'contain', label: 'Tam Boyut',   desc: 'Görselin tamamı görünür, boşluk kalabilir',     preview: 'object-contain' },
+]
 
 export default function ManageSlider() {
   const [params] = useSearchParams()
-  const { docs, loading } = useCollection('sliders', 'order', 20)
+  // ascending: true → order alanına göre küçükten büyüğe (anasayfayla aynı sıra)
+  const { docs, loading } = useCollection('sliders', 'order', 20, true)
   const [showForm, setShowForm] = useState(params.get('new') === '1')
   const [form, setForm] = useState(EMPTY_FORM)
   const [editId, setEditId] = useState(null)
@@ -16,38 +22,45 @@ export default function ManageSlider() {
   const [imgFile, setImgFile] = useState(null)
   const [imgPreview, setImgPreview] = useState('')
 
-  // Sürükle-bırak sıralaması için yerel kopya
+  // Sürükle-bırak
   const [ordered, setOrdered] = useState([])
   const [orderDirty, setOrderDirty] = useState(false)
   const [savingOrder, setSavingOrder] = useState(false)
   const dragIdx = useRef(null)
   const dragOverIdx = useRef(null)
+  const [dragOver, setDragOver] = useState(null)
 
   useEffect(() => {
     setOrdered(docs)
     setOrderDirty(false)
   }, [docs])
 
-  /* ── Drag & Drop ─────────────────────────────── */
-  function onDragStart(i) {
+  /* ── Drag & Drop ───────────────────── */
+  function onDragStart(e, i) {
     dragIdx.current = i
+    e.dataTransfer.effectAllowed = 'move'
   }
   function onDragOver(e, i) {
     e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
     dragOverIdx.current = i
+    setDragOver(i)
   }
-  function onDrop() {
+  function onDragLeave() { setDragOver(null) }
+  function onDrop(e, i) {
+    e.preventDefault()
     const from = dragIdx.current
-    const to = dragOverIdx.current
-    if (from === null || to === null || from === to) return
+    if (from === null || from === i) { setDragOver(null); return }
     const next = [...ordered]
     const [moved] = next.splice(from, 1)
-    next.splice(to, 0, moved)
+    next.splice(i, 0, moved)
     setOrdered(next)
     setOrderDirty(true)
     dragIdx.current = null
     dragOverIdx.current = null
+    setDragOver(null)
   }
+  function onDragEnd() { setDragOver(null) }
 
   async function saveOrder() {
     setSavingOrder(true)
@@ -63,11 +76,18 @@ export default function ManageSlider() {
     }
   }
 
-  /* ── Form helpers ────────────────────────────── */
-  function openNew() { setForm(EMPTY_FORM); setEditId(null); setImgPreview(''); setImgFile(null); setShowForm(true) }
+  /* ── Form ──────────────────────────── */
+  function openNew() {
+    setForm({ ...EMPTY_FORM, order: ordered.length })
+    setEditId(null); setImgPreview(''); setImgFile(null); setShowForm(true)
+  }
 
   function openEdit(doc) {
-    setForm({ title: doc.title || '', subtitle: doc.subtitle || '', imageUrl: doc.imageUrl || '', published: doc.published ?? false, order: doc.order ?? 0 })
+    setForm({
+      title: doc.title || '', subtitle: doc.subtitle || '',
+      imageUrl: doc.imageUrl || '', published: doc.published ?? false,
+      order: doc.order ?? 0, fit: doc.fit || 'cover',
+    })
     setEditId(doc.id); setImgPreview(doc.imageUrl || ''); setImgFile(null); setShowForm(true)
   }
 
@@ -85,11 +105,7 @@ export default function ManageSlider() {
       if (imgFile) imageUrl = await uploadFile('sliders', imgFile.name, imgFile)
       const data = { ...form, imageUrl }
       if (editId) await updateDocument('sliders', editId, data)
-      else {
-        // Yeni slide'ı en sona ekle
-        const maxOrder = ordered.length > 0 ? Math.max(...ordered.map(d => d.order ?? 0)) : -1
-        await addDocument('sliders', { ...data, order: maxOrder + 1 })
-      }
+      else await addDocument('sliders', { ...data, order: ordered.length })
       setShowForm(false)
     } catch (err) {
       alert('Hata: ' + err.message)
@@ -116,11 +132,8 @@ export default function ManageSlider() {
         </div>
         <div className="flex items-center gap-2">
           {orderDirty && (
-            <button
-              onClick={saveOrder}
-              disabled={savingOrder}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
-            >
+            <button onClick={saveOrder} disabled={savingOrder}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors">
               <FaSave size={13} /> {savingOrder ? 'Kaydediliyor...' : 'Sırayı Kaydet'}
             </button>
           )}
@@ -130,7 +143,6 @@ export default function ManageSlider() {
         </div>
       </div>
 
-      {/* Sürükle ipucu */}
       {!loading && ordered.length > 1 && (
         <div className="flex items-center gap-2 mb-4 text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
           <FaGripVertical size={11} />
@@ -150,13 +162,48 @@ export default function ManageSlider() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Başlık *</label>
                 <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                  className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Alt Başlık</label>
                 <input value={form.subtitle} onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                  className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
               </div>
+
+              {/* Görsel boyut seçeneği */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Görsel Boyutu</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {FIT_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, fit: opt.value }))}
+                      className={`flex flex-col items-start p-3 rounded-xl border-2 text-left transition-all ${
+                        form.fit === opt.value
+                          ? 'border-primary-600 bg-primary-50'
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      {/* Mini önizleme */}
+                      <div className="w-full h-14 bg-slate-200 rounded-lg overflow-hidden mb-2 relative">
+                        {imgPreview ? (
+                          <img src={imgPreview} alt="" className={`w-full h-full ${opt.preview}`} />
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-slate-400 text-xs">
+                            {opt.value === 'cover' ? '▦ Kaplama' : '⬜ Tam'}
+                          </div>
+                        )}
+                      </div>
+                      <span className={`text-sm font-semibold ${form.fit === opt.value ? 'text-primary-700' : 'text-slate-700'}`}>
+                        {opt.label}
+                      </span>
+                      <span className="text-xs text-slate-400 mt-0.5">{opt.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex items-center">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={form.published} onChange={e => setForm(f => ({ ...f, published: e.target.checked }))}
@@ -164,6 +211,7 @@ export default function ManageSlider() {
                   <span className="text-sm font-medium text-slate-700">Yayınla</span>
                 </label>
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Görsel</label>
                 <div className="flex items-start gap-3 mb-2">
@@ -171,12 +219,13 @@ export default function ManageSlider() {
                     <FaImage size={14} /> Dosya Seç
                     <input type="file" accept="image/*" className="hidden" onChange={handleImgChange} />
                   </label>
-                  {imgPreview && <img src={imgPreview} alt="" className="h-16 w-28 object-cover rounded-lg border" />}
+                  {imgPreview && <img src={imgPreview} alt="" className={`h-16 w-28 rounded-lg border ${form.fit === 'cover' ? 'object-cover' : 'object-contain bg-slate-100'}`} />}
                 </div>
                 <input value={form.imageUrl} onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))}
                   placeholder="ya da URL yapıştırın"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                  className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
               </div>
+
               <div className="flex gap-3 pt-2">
                 <button type="submit" disabled={saving}
                   className="flex-1 bg-primary-700 hover:bg-primary-800 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">
@@ -204,25 +253,33 @@ export default function ManageSlider() {
             <div
               key={d.id}
               draggable
-              onDragStart={() => onDragStart(i)}
+              onDragStart={e => onDragStart(e, i)}
               onDragOver={e => onDragOver(e, i)}
-              onDrop={onDrop}
-              className="bg-white rounded-2xl overflow-hidden shadow border border-slate-100 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing active:ring-2 active:ring-primary-400 select-none"
+              onDragLeave={onDragLeave}
+              onDrop={e => onDrop(e, i)}
+              onDragEnd={onDragEnd}
+              className={`bg-white rounded-2xl overflow-hidden shadow border-2 transition-all cursor-grab active:cursor-grabbing select-none ${
+                dragOver === i ? 'border-primary-400 scale-[1.02] shadow-lg' : 'border-slate-100 hover:shadow-md'
+              }`}
             >
               <div className="relative h-36 overflow-hidden bg-slate-100">
                 {d.imageUrl ? (
-                  <img src={d.imageUrl} alt={d.title} className="w-full h-full object-cover" />
+                  <img src={d.imageUrl} alt={d.title}
+                    className={`w-full h-full ${d.fit === 'contain' ? 'object-contain' : 'object-cover'}`} />
                 ) : (
                   <div className="flex items-center justify-center h-full text-slate-400"><FaImage size={32} /></div>
                 )}
-                {/* Sıra numarası */}
-                <span className="absolute top-2 left-2 bg-black/50 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
+                <span className="absolute top-2 left-2 bg-black/60 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
                   {i + 1}
                 </span>
                 <button onClick={() => togglePublish(d)}
                   className={`absolute top-2 right-2 text-xs px-2 py-1 rounded-full font-semibold flex items-center gap-1 ${d.published ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
                   {d.published ? <><FaEye size={10} /> Yayında</> : <><FaEyeSlash size={10} /> Taslak</>}
                 </button>
+                {/* fit etiketi */}
+                <span className="absolute bottom-2 left-2 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
+                  {d.fit === 'contain' ? 'Tam Boyut' : 'Kaplama'}
+                </span>
               </div>
               <div className="p-4">
                 <div className="flex items-center gap-2 mb-0.5">
