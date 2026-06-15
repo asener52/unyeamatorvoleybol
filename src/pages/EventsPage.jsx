@@ -9,13 +9,25 @@ export default function EventsPage() {
   const { settings } = useSettings()
 
   const now = new Date()
+
+  // Bu haftanın Pazartesi 00:00'ı (hafta başı)
+  const weekStart = new Date(now)
+  const day = weekStart.getDay() // 0=Pazar, 1=Pzt...
+  const diffToMonday = (day === 0 ? -6 : 1 - day)
+  weekStart.setDate(weekStart.getDate() + diffToMonday)
+  weekStart.setHours(0, 0, 0, 0)
+
+  // İki hafta sonraki Pazartesi 00:00 (görünürlük sınırı)
+  const twoWeeksEnd = new Date(weekStart)
+  twoWeeksEnd.setDate(twoWeeksEnd.getDate() + 14)
+
   const upcoming = docs.filter(e => {
     const d = e.date?.toDate ? e.date.toDate() : new Date(e.date)
-    return d >= now
+    return d >= weekStart && d < twoWeeksEnd
   })
   const past = docs.filter(e => {
     const d = e.date?.toDate ? e.date.toDate() : new Date(e.date)
-    return d < now
+    return d < weekStart
   })
 
   return (
