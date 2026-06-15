@@ -82,7 +82,7 @@ export default function Navbar() {
   const { member, logout } = useMember()
   const navigate = useNavigate()
   const brand = settings?.brand || {}
-  const unread = useUnreadMessages(member?.id)
+  const { total: unread } = useUnreadMessages(member?.id)
 
   const siteName = brand.name || 'Ünye Amatör Voleybol Topluluğu'
   const shortName = brand.shortName || 'ÜAV'

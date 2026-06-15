@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useMember } from '../contexts/MemberAuthContext'
-import { markMessagesRead } from '../hooks/useUnreadMessages'
+import { markConversationRead, useUnreadMessages } from '../hooks/useUnreadMessages'
 import { FaPaperPlane, FaUsers, FaUser, FaComments, FaSignInAlt } from 'react-icons/fa'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
@@ -35,11 +35,7 @@ export default function ChatPage() {
   const [activeDM, setActiveDM] = useState(null) // null = grup sohbeti
   const [showSidebar, setShowSidebar] = useState(false)
   const bottomRef = useRef(null)
-
-  // Sayfa açılınca okunmamışları sıfırla
-  useEffect(() => {
-    if (member) markMessagesRead(member.id)
-  }, [member])
+  const { byConversation = {} } = useUnreadMessages(member?.id)
 
   // Onaylı üyeleri yükle
   useEffect(() => {
@@ -132,27 +128,37 @@ export default function ChatPage() {
           <div className="flex-1 overflow-y-auto">
             {/* Grup sohbeti */}
             <button
-              onClick={() => { setActiveDM(null); setShowSidebar(false) }}
+              onClick={() => { setActiveDM(null); setShowSidebar(false); markConversationRead(member.id, 'group') }}
               className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left ${!activeDM ? 'bg-primary-50 border-r-2 border-primary-600' : ''}`}>
               <div className="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
                 <FaComments className="text-primary-600" size={15} />
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <div className="font-semibold text-slate-800 text-sm">Topluluk Sohbeti</div>
                 <div className="text-xs text-slate-400">Tüm üyeler</div>
               </div>
+              {byConversation['group'] > 0 && (
+                <span className="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shrink-0">
+                  {byConversation['group'] > 9 ? '9+' : byConversation['group']}
+                </span>
+              )}
             </button>
 
             <div className="px-4 py-2 text-xs text-slate-400 font-semibold uppercase tracking-wide">Direkt Mesaj</div>
             {members.filter(m => m.id !== member.id).map(m => (
               <button key={m.id}
-                onClick={() => { setActiveDM(m); setShowSidebar(false) }}
+                onClick={() => { setActiveDM(m); setShowSidebar(false); markConversationRead(member.id, m.id) }}
                 className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left ${activeDM?.id === m.id ? 'bg-primary-50 border-r-2 border-primary-600' : ''}`}>
                 <Avatar name={m.name} size={9} />
-                <div>
+                <div className="flex-1 min-w-0">
                   <div className="font-semibold text-slate-800 text-sm">{m.name}</div>
                   <div className="text-xs text-slate-400">{m.position || 'Üye'}</div>
                 </div>
+                {byConversation[m.id] > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shrink-0">
+                    {byConversation[m.id] > 9 ? '9+' : byConversation[m.id]}
+                  </span>
+                )}
               </button>
             ))}
           </div>
