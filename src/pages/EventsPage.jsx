@@ -5,7 +5,7 @@ import { useSettings } from '../hooks/useSettings'
 import { FaEnvelope } from 'react-icons/fa'
 
 export default function EventsPage() {
-  const { docs, loading } = usePublishedCollection('events', 50)
+  const { docs, loading } = usePublishedCollection('events', 200, 'date', true)
   const { settings } = useSettings()
 
   const now = new Date()
