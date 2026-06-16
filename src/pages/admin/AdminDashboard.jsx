@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Link } from 'react-router-dom'
-import { FaNewspaper, FaImages, FaCalendarAlt, FaPoll, FaPhotoVideo, FaArrowRight } from 'react-icons/fa'
+import { FaNewspaper, FaImages, FaCalendarAlt, FaPoll, FaPhotoVideo, FaArrowRight, FaVolleyballBall, FaCheck, FaClock, FaTimes, FaUsers } from 'react-icons/fa'
 
 const sections = [
   { label: 'Haberler', col: 'news', icon: FaNewspaper, to: '/admin/haberler', color: 'bg-blue-500' },
@@ -13,6 +13,7 @@ const sections = [
 
 export default function AdminDashboard() {
   const [counts, setCounts] = useState({})
+  const [matchStats, setMatchStats] = useState(null)
 
   useEffect(() => {
     sections.forEach(async ({ col }) => {
@@ -25,6 +26,38 @@ export default function AdminDashboard() {
         setCounts(prev => ({ ...prev, [col]: '—' }))
       }
     })
+
+    // Maç istatistiklerini çek
+    async function fetchMatchStats() {
+      try {
+        const { data } = await supabase
+          .from('match_requests')
+          .select('status, type, event_id, event_title, event_date')
+        if (!data) return
+        const total = data.length
+        const onaylandi = data.filter(d => d.status === 'onaylandi').length
+        const bekliyor = data.filter(d => d.status === 'bekliyor').length
+        const reddedildi = data.filter(d => d.status === 'reddedildi').length
+        const oyuncu = data.filter(d => d.type === 'oyuncu').length
+        const seyirci = data.filter(d => d.type === 'seyirci').length
+
+        // Etkinlik bazlı istatistikler
+        const eventMap = {}
+        data.forEach(d => {
+          const key = d.event_id || '__none__'
+          if (!eventMap[key]) eventMap[key] = { title: d.event_title || 'Belirtilmemiş', date: d.event_date || '', total: 0, onaylandi: 0, bekliyor: 0 }
+          eventMap[key].total++
+          if (d.status === 'onaylandi') eventMap[key].onaylandi++
+          if (d.status === 'bekliyor') eventMap[key].bekliyor++
+        })
+        const topEvents = Object.values(eventMap)
+          .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+          .slice(0, 5)
+
+        setMatchStats({ total, onaylandi, bekliyor, reddedildi, oyuncu, seyirci, topEvents })
+      } catch {}
+    }
+    fetchMatchStats()
   }, [])
 
   return (
@@ -52,6 +85,66 @@ export default function AdminDashboard() {
             </div>
           </Link>
         ))}
+      </div>
+
+      {/* Maç İstatistikleri */}
+      <div className="mb-10">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-slate-700 flex items-center gap-2">
+            <FaVolleyballBall className="text-primary-600" size={18} />
+            Maç Katılım İstatistikleri
+          </h2>
+          <Link to="/admin/mac-talepleri" className="text-xs text-primary-600 hover:text-primary-800 font-semibold flex items-center gap-1">
+            Tümünü Gör <FaArrowRight size={10} />
+          </Link>
+        </div>
+
+        {!matchStats ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+            {[...Array(6)].map((_, i) => <div key={i} className="h-20 bg-slate-100 animate-pulse rounded-xl" />)}
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-5">
+              {[
+                { label: 'Toplam', value: matchStats.total, color: 'text-slate-800', bg: 'bg-slate-50', icon: FaUsers },
+                { label: 'Onaylandı', value: matchStats.onaylandi, color: 'text-green-700', bg: 'bg-green-50', icon: FaCheck },
+                { label: 'Bekliyor', value: matchStats.bekliyor, color: 'text-yellow-700', bg: 'bg-yellow-50', icon: FaClock },
+                { label: 'Reddedildi', value: matchStats.reddedildi, color: 'text-red-700', bg: 'bg-red-50', icon: FaTimes },
+                { label: 'Oyuncu', value: matchStats.oyuncu, color: 'text-blue-700', bg: 'bg-blue-50', icon: FaVolleyballBall },
+                { label: 'Seyirci', value: matchStats.seyirci, color: 'text-purple-700', bg: 'bg-purple-50', icon: null },
+              ].map(({ label, value, color, bg, icon: Icon }) => (
+                <div key={label} className={`${bg} rounded-xl p-3 text-center border border-white shadow-sm`}>
+                  <div className={`text-2xl font-extrabold ${color}`}>{value}</div>
+                  <div className="text-xs text-slate-500 mt-0.5">{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {matchStats.topEvents.length > 0 && (
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
+                  <span className="text-xs font-semibold text-slate-600">Etkinlik Bazlı Durum</span>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {matchStats.topEvents.map((ev, i) => (
+                    <div key={i} className="px-5 py-3 flex items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-slate-800 text-sm truncate">{ev.title}</div>
+                        {ev.date && <div className="text-xs text-slate-400">{ev.date}</div>}
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0 text-xs font-semibold">
+                        <span className="text-slate-500">{ev.total} başvuru</span>
+                        <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded-full">{ev.onaylandi} onay</span>
+                        <span className="text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full">{ev.bekliyor} bekliyor</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       <h2 className="text-lg font-bold text-slate-700 mb-4">Hızlı İşlemler</h2>

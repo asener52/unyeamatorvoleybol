@@ -17,7 +17,9 @@
       "PowerShell(& \"C:\\\\src\\\\flutter\\\\bin\\\\flutter.bat\" --version 2>&1)",
       "Bash(findstr /s /i \"slider\" \"D:\\\\_App\\\\amator_voleybol\\\\src\\\\*.jsx\" \"D:\\\\_App\\\\amator_voleybol\\\\src\\\\components\\\\*.jsx\")",
       "Bash(Get-Content D:\\\\_App\\\\amator_voleybol\\\\package.json)",
-      "Bash(Select-String \"dev\")"
+      "Bash(Select-String \"dev\")",
+      "Bash(Get-ChildItem -Path \"D:\\\\_App\\\\amator_voleybol\" -Directory)",
+      "Bash(Select-Object Name)"
     ]
   }
 }
