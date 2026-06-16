@@ -28,7 +28,7 @@ export default function EventCard({ event }) {
       {event.imageUrl && (
         <div
           className={`overflow-hidden rounded-t-xl relative group ${isMatch ? 'cursor-pointer' : ''}`}
-          onClick={isMatch ? () => navigate('/mac-kayit', { state: { eventId: event.id, eventTitle: event.title } }) : undefined}
+          onClick={isMatch ? () => navigate('/mac-kayit', { state: { eventId: event.id, eventTitle: event.title, eventDate: event.date } }) : undefined}
         >
           <img
             src={event.imageUrl}
@@ -89,7 +89,7 @@ export default function EventCard({ event }) {
         {/* Görsel yoksa Maç kartının altında buton göster */}
         {isMatch && !event.imageUrl && (
           <button
-            onClick={() => navigate('/mac-kayit', { state: { eventId: event.id, eventTitle: event.title } })}
+            onClick={() => navigate('/mac-kayit', { state: { eventId: event.id, eventTitle: event.title, eventDate: event.date } })}
             className="mt-4 flex items-center justify-center gap-2 w-full bg-primary-700 hover:bg-primary-800 text-white font-bold text-sm py-2.5 rounded-xl transition-colors"
           >
             <FaVolleyballBall size={14} /> Maça Katıl
