@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useCollection } from '../../hooks/useFirestore'
-import { FaTrash, FaVolleyballBall, FaPhone, FaUser, FaCheck, FaTimes, FaClock, FaSort, FaSortUp, FaSortDown, FaChartBar, FaCalendarAlt } from 'react-icons/fa'
+import { FaTrash, FaVolleyballBall, FaPhone, FaUser, FaTimes, FaClock, FaSort, FaSortUp, FaSortDown, FaChartBar, FaCalendarAlt, FaStar, FaShieldAlt } from 'react-icons/fa'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
 
@@ -16,9 +16,44 @@ function formatEventDate(dateStr) {
 }
 
 const STATUS_CONFIG = {
-  bekliyor:   { label: 'Bekliyor',   icon: FaClock, cls: 'bg-yellow-100 text-yellow-700' },
-  onaylandi:  { label: 'Onaylandı',  icon: FaCheck, cls: 'bg-green-100 text-green-700' },
-  reddedildi: { label: 'Reddedildi', icon: FaTimes, cls: 'bg-red-100 text-red-700' },
+  bekliyor:    { label: 'Bekliyor',     cls: 'bg-yellow-100 text-yellow-700' },
+  as_kadro:    { label: 'As Kadro',     cls: 'bg-green-100 text-green-700' },
+  yedek_kadro: { label: 'Yedek Kadro', cls: 'bg-blue-100 text-blue-700' },
+  reddedildi:  { label: 'Reddedildi',  cls: 'bg-red-100 text-red-700' },
+}
+
+function RosterSection({ title, players, icon, color, emptyText }) {
+  return (
+    <div className="mt-4">
+      <div className={`flex items-center gap-2 px-4 py-2 rounded-lg mb-2 ${color}`}>
+        {icon}
+        <span className="font-bold text-sm">{title}</span>
+        <span className="ml-auto font-bold text-sm">{players.length} kişi</span>
+      </div>
+      {players.length === 0 ? (
+        <p className="text-xs text-slate-400 px-2 py-1">{emptyText}</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {players.map((p, i) => (
+            <div key={p.id} className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg">
+              <span className="text-xs font-bold text-slate-400 w-5 shrink-0">{i + 1}.</span>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-slate-800 text-sm truncate">{p.name}</div>
+                <a href={`tel:${p.phone}`} className="text-xs text-primary-600 hover:text-primary-800">
+                  {p.phone}
+                </a>
+              </div>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${
+                p.type === 'oyuncu' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+              }`}>
+                {p.type === 'oyuncu' ? 'Oyuncu' : 'Seyirci'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function ManageMatchRequests() {
@@ -68,23 +103,30 @@ export default function ManageMatchRequests() {
     return list
   }, [docs, filter, sortField, sortDir])
 
-  // Maç bazlı istatistikler
-  const matchStats = useMemo(() => {
+  // Maç bazlı gruplama: her etkinlik için kişi listeleri
+  const matchGroups = useMemo(() => {
     const map = {}
     docs.forEach(d => {
       const key = d.event_id || '__no_event__'
-      if (!map[key]) map[key] = { title: d.event_title || 'Belirtilmemiş', date: d.event_date || '', total: 0, onaylandi: 0, bekliyor: 0, reddedildi: 0, oyuncu: 0, seyirci: 0 }
-      map[key].total++
-      map[key][d.status || 'bekliyor']++
-      map[key][d.type || 'oyuncu']++
+      if (!map[key]) map[key] = {
+        title: d.event_title || 'Belirtilmemiş',
+        date: d.event_date || '',
+        as_kadro: [],
+        yedek_kadro: [],
+        bekliyor: [],
+        reddedildi: [],
+      }
+      const status = d.status || 'bekliyor'
+      if (map[key][status]) map[key][status].push(d)
+      else map[key].bekliyor.push(d)
     })
     return Object.values(map).sort((a, b) => (a.date || '').localeCompare(b.date || ''))
   }, [docs])
 
-  const oyuncuCount   = docs.filter(d => d.type === 'oyuncu').length
-  const seyirciCount  = docs.filter(d => d.type === 'seyirci').length
-  const bekliyorCount = docs.filter(d => d.status === 'bekliyor').length
-  const onaylandiCount= docs.filter(d => d.status === 'onaylandi').length
+  const asKadroCount    = docs.filter(d => d.status === 'as_kadro').length
+  const yedekKadroCount = docs.filter(d => d.status === 'yedek_kadro').length
+  const bekliyorCount   = docs.filter(d => d.status === 'bekliyor').length
+  const reddedildiCount = docs.filter(d => d.status === 'reddedildi').length
 
   return (
     <div>
@@ -108,90 +150,103 @@ export default function ManageMatchRequests() {
       {/* Özet kartları */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 text-center">
-          <div className="text-2xl font-extrabold text-primary-700">{oyuncuCount}</div>
-          <div className="text-xs text-slate-500 mt-0.5">Oyuncu</div>
+          <div className="text-2xl font-extrabold text-green-600">{asKadroCount}</div>
+          <div className="text-xs text-slate-500 mt-0.5">As Kadro</div>
         </div>
         <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 text-center">
-          <div className="text-2xl font-extrabold text-slate-700">{seyirciCount}</div>
-          <div className="text-xs text-slate-500 mt-0.5">Seyirci</div>
+          <div className="text-2xl font-extrabold text-blue-600">{yedekKadroCount}</div>
+          <div className="text-xs text-slate-500 mt-0.5">Yedek Kadro</div>
         </div>
         <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 text-center">
           <div className="text-2xl font-extrabold text-yellow-600">{bekliyorCount}</div>
           <div className="text-xs text-slate-500 mt-0.5">Bekliyor</div>
         </div>
         <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 text-center">
-          <div className="text-2xl font-extrabold text-green-600">{onaylandiCount}</div>
-          <div className="text-xs text-slate-500 mt-0.5">Onaylandı</div>
+          <div className="text-2xl font-extrabold text-red-500">{reddedildiCount}</div>
+          <div className="text-xs text-slate-500 mt-0.5">Reddedildi</div>
         </div>
       </div>
 
       {view === 'mac' ? (
         /* Maç bazlı görünüm */
-        <div>
-          <h2 className="text-sm font-semibold text-slate-600 mb-3">Maç Bazlı Başvuru İstatistikleri</h2>
+        <div className="space-y-4">
           {loading ? (
-            <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="h-20 bg-slate-200 animate-pulse rounded-xl" />)}</div>
-          ) : matchStats.length === 0 ? (
+            <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="h-40 bg-slate-200 animate-pulse rounded-2xl" />)}</div>
+          ) : matchGroups.length === 0 ? (
             <div className="text-center py-16 text-slate-400">Talep bulunamadı.</div>
-          ) : (
-            <div className="space-y-3">
-              {matchStats.map((m, i) => (
-                <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                  <div className="flex items-start justify-between gap-4 mb-4">
-                    <div>
-                      <div className="font-bold text-slate-800">{m.title}</div>
-                      {m.date && (
-                        <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                          <FaCalendarAlt size={10} /> {formatEventDate(m.date)}
-                        </div>
-                      )}
-                    </div>
-                    <span className="text-lg font-extrabold text-primary-700 shrink-0">{m.total} başvuru</span>
-                  </div>
-                  <div className="grid grid-cols-5 gap-2 text-center text-xs">
-                    <div className="bg-blue-50 rounded-lg p-2">
-                      <div className="font-bold text-blue-700 text-base">{m.oyuncu}</div>
-                      <div className="text-blue-500">Oyuncu</div>
-                    </div>
-                    <div className="bg-purple-50 rounded-lg p-2">
-                      <div className="font-bold text-purple-700 text-base">{m.seyirci}</div>
-                      <div className="text-purple-500">Seyirci</div>
-                    </div>
-                    <div className="bg-green-50 rounded-lg p-2">
-                      <div className="font-bold text-green-700 text-base">{m.onaylandi}</div>
-                      <div className="text-green-500">Onaylandı</div>
-                    </div>
-                    <div className="bg-yellow-50 rounded-lg p-2">
-                      <div className="font-bold text-yellow-700 text-base">{m.bekliyor}</div>
-                      <div className="text-yellow-500">Bekliyor</div>
-                    </div>
-                    <div className="bg-red-50 rounded-lg p-2">
-                      <div className="font-bold text-red-700 text-base">{m.reddedildi}</div>
-                      <div className="text-red-500">Reddedildi</div>
-                    </div>
-                  </div>
-                  {m.total > 0 && (
-                    <div className="mt-3 h-2 bg-slate-100 rounded-full overflow-hidden flex">
-                      <div className="bg-green-400 h-full transition-all" style={{ width: `${(m.onaylandi / m.total) * 100}%` }} />
-                      <div className="bg-yellow-400 h-full transition-all" style={{ width: `${(m.bekliyor / m.total) * 100}%` }} />
-                      <div className="bg-red-400 h-full transition-all" style={{ width: `${(m.reddedildi / m.total) * 100}%` }} />
+          ) : matchGroups.map((m, i) => (
+            <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+              {/* Maç başlığı */}
+              <div className="flex items-start justify-between gap-4 pb-4 border-b border-slate-100">
+                <div>
+                  <div className="font-extrabold text-slate-800 text-base">{m.title}</div>
+                  {m.date && (
+                    <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                      <FaCalendarAlt size={10} /> {formatEventDate(m.date)}
                     </div>
                   )}
                 </div>
-              ))}
+                <div className="flex gap-2 shrink-0 text-xs font-semibold">
+                  <span className="bg-green-50 text-green-700 px-2.5 py-1 rounded-full">{m.as_kadro.length} As</span>
+                  <span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full">{m.yedek_kadro.length} Yedek</span>
+                  <span className="bg-yellow-50 text-yellow-700 px-2.5 py-1 rounded-full">{m.bekliyor.length} Bekliyor</span>
+                </div>
+              </div>
+
+              {/* As Kadro */}
+              <RosterSection
+                title="As Kadro"
+                players={m.as_kadro}
+                icon={<FaStar size={13} className="text-green-600" />}
+                color="bg-green-50 text-green-800"
+                emptyText="Henüz as kadroya alınan yok."
+              />
+
+              {/* Yedek Kadro */}
+              <RosterSection
+                title="Yedek Kadro"
+                players={m.yedek_kadro}
+                icon={<FaShieldAlt size={13} className="text-blue-600" />}
+                color="bg-blue-50 text-blue-800"
+                emptyText="Henüz yedek kadroya alınan yok."
+              />
+
+              {/* Bekleyenler - sadece varsa göster */}
+              {m.bekliyor.length > 0 && (
+                <RosterSection
+                  title="Bekleyenler"
+                  players={m.bekliyor}
+                  icon={<FaClock size={13} className="text-yellow-600" />}
+                  color="bg-yellow-50 text-yellow-800"
+                  emptyText=""
+                />
+              )}
+
+              {/* Reddedilenler - sadece varsa göster */}
+              {m.reddedildi.length > 0 && (
+                <RosterSection
+                  title="Reddedilenler"
+                  players={m.reddedildi}
+                  icon={<FaTimes size={13} className="text-red-500" />}
+                  color="bg-red-50 text-red-700"
+                  emptyText=""
+                />
+              )}
             </div>
-          )}
+          ))}
         </div>
       ) : (
         /* Liste görünümü */
         <>
           <div className="flex gap-2 mb-4 flex-wrap">
             {[
-              { key: 'hepsi', label: 'Tümü' },
-              { key: 'oyuncu', label: 'Oyuncular' },
-              { key: 'seyirci', label: 'Seyirciler' },
-              { key: 'bekliyor', label: 'Bekleyenler' },
-              { key: 'onaylandi', label: 'Onaylananlar' },
+              { key: 'hepsi',       label: 'Tümü' },
+              { key: 'oyuncu',      label: 'Oyuncular' },
+              { key: 'seyirci',     label: 'Seyirciler' },
+              { key: 'as_kadro',    label: 'As Kadro' },
+              { key: 'yedek_kadro', label: 'Yedek Kadro' },
+              { key: 'bekliyor',    label: 'Bekleyenler' },
+              { key: 'reddedildi',  label: 'Reddedilenler' },
             ].map(({ key, label }) => (
               <button key={key} onClick={() => setFilter(key)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
@@ -236,7 +291,7 @@ export default function ManageMatchRequests() {
                 <tbody className="divide-y divide-slate-100">
                   {filtered.map(d => {
                     const status = d.status || 'bekliyor'
-                    const { label, icon: Icon, cls } = STATUS_CONFIG[status] || STATUS_CONFIG.bekliyor
+                    const { label, cls } = STATUS_CONFIG[status] || STATUS_CONFIG.bekliyor
                     return (
                       <tr key={d.id} className="hover:bg-slate-50">
                         <td className="px-4 py-3">
@@ -277,7 +332,8 @@ export default function ManageMatchRequests() {
                             className={`text-xs px-2 py-1 rounded-full font-semibold border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-400 ${cls}`}
                           >
                             <option value="bekliyor">Bekliyor</option>
-                            <option value="onaylandi">Onaylandı</option>
+                            <option value="as_kadro">As Kadro</option>
+                            <option value="yedek_kadro">Yedek Kadro</option>
                             <option value="reddedildi">Reddedildi</option>
                           </select>
                         </td>
