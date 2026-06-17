@@ -108,7 +108,7 @@ export default function MemberProfilePage() {
   }
 
   function openEdit() {
-    setForm({ name: member.name || '', email: member.email || '', position: member.position || POSITIONS[0] })
+    setForm({ name: member.name || '', email: member.email || '', position: member.position || POSITIONS[0], team: member.team || '' })
     setPwForm({ current: '', next: '', confirm: '' })
     setError('')
     setSuccess('')
@@ -126,9 +126,10 @@ export default function MemberProfilePage() {
         name: form.name.trim(),
         email: form.email.trim() || null,
         position: form.position,
+        team: form.team?.trim() || null,
       }).eq('id', member.id)
       if (err) throw err
-      updateSession({ name: form.name.trim(), email: form.email.trim() || null, position: form.position })
+      updateSession({ name: form.name.trim(), email: form.email.trim() || null, position: form.position, team: form.team?.trim() || null })
       setEditing(false)
     } catch (err) {
       setError('Hata: ' + err.message)
@@ -290,9 +291,20 @@ export default function MemberProfilePage() {
                       className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
                   </div>
                   <div>
+                    <label className="block text-xs text-slate-500 mb-1">Telefon <span className="text-slate-300">(değiştirilemez)</span></label>
+                    <input readOnly value={member.phone}
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-400 cursor-not-allowed" />
+                  </div>
+                  <div>
                     <label className="block text-xs text-slate-500 mb-1">E-posta</label>
                     <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                       placeholder="ornek@email.com"
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">Takım <span className="text-slate-300">(isteğe bağlı)</span></label>
+                    <input value={form.team || ''} onChange={e => setForm(f => ({ ...f, team: e.target.value }))}
+                      placeholder="Örn: Sağlıkçılar, Belediyespor…"
                       className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
                   </div>
                   <div>
@@ -302,7 +314,6 @@ export default function MemberProfilePage() {
                       {POSITIONS.map(p => <option key={p}>{p}</option>)}
                     </select>
                   </div>
-                  <p className="text-xs text-slate-400">Telefon numarası değiştirilemez. Değişiklik için yöneticiyle iletişime geçin.</p>
                   <div className="flex gap-2 pt-1">
                     <button type="submit" disabled={saving}
                       className="flex-1 bg-primary-700 hover:bg-primary-800 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg text-sm">

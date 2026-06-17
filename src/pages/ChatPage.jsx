@@ -17,11 +17,13 @@ function formatTime(ts) {
   } catch { return '' }
 }
 
-function Avatar({ name, size = 8 }) {
+function Avatar({ name, avatarUrl, size = 8 }) {
   const initials = (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
   return (
-    <div className={`w-${size} h-${size} rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold shrink-0`}>
-      {initials}
+    <div className={`w-${size} h-${size} rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden`}>
+      {avatarUrl
+        ? <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
+        : initials}
     </div>
   )
 }
@@ -39,7 +41,7 @@ export default function ChatPage() {
 
   // Onaylı üyeleri yükle
   useEffect(() => {
-    supabase.from('members').select('id,name,position').eq('status', 'approved').order('name')
+    supabase.from('members').select('id,name,position,avatar_url').eq('status', 'approved').order('name')
       .then(({ data }) => setMembers(data || []))
   }, [])
 
@@ -149,7 +151,7 @@ export default function ChatPage() {
               <button key={m.id}
                 onClick={() => { setActiveDM(m); setShowSidebar(false); markConversationRead(member.id, m.id) }}
                 className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left ${activeDM?.id === m.id ? 'bg-primary-50 border-r-2 border-primary-600' : ''}`}>
-                <Avatar name={m.name} size={9} />
+                <Avatar name={m.name} avatarUrl={m.avatar_url} size={9} />
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-slate-800 text-sm">{m.name}</div>
                   <div className="text-xs text-slate-400">{m.position || 'Üye'}</div>
@@ -171,7 +173,7 @@ export default function ChatPage() {
             <button onClick={() => setShowSidebar(!showSidebar)} className="md:hidden text-slate-500 hover:text-slate-800 p-1">
               <FaUsers size={18} />
             </button>
-            {activeDM ? <Avatar name={activeDM.name} size={9} /> : (
+            {activeDM ? <Avatar name={activeDM.name} avatarUrl={activeDM.avatar_url} size={9} /> : (
               <div className="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
                 <FaComments className="text-primary-600" size={15} />
               </div>
@@ -196,7 +198,7 @@ export default function ChatPage() {
 
               return (
                 <div key={msg.id} className={`flex gap-2.5 ${isMe ? 'flex-row-reverse' : ''}`}>
-                  {!isMe && showSender && <Avatar name={msg.sender_name} size={8} />}
+                  {!isMe && showSender && <Avatar name={msg.sender_name} avatarUrl={members.find(m => m.id === msg.sender_id)?.avatar_url} size={8} />}
                   {!isMe && !showSender && <div className="w-8 shrink-0" />}
                   <div className={`max-w-[75%] ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
                     {!isMe && showSender && (

@@ -44,7 +44,7 @@ function formatPhoneInput(raw) {
 }
 
 export default function MembershipPage() {
-  const [form, setForm] = useState({ name: '', phone: '', email: '', position: 'Pasör (Setter)', password: '', confirmPassword: '' })
+  const [form, setForm] = useState({ name: '', phone: '', email: '', team: '', position: 'Pasör (Setter)', password: '', confirmPassword: '' })
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
@@ -86,6 +86,7 @@ export default function MembershipPage() {
         name: form.name.trim(),
         phone: fullPhone,
         email: form.email.trim() || null,
+        team: form.team.trim() || null,
         position: form.position,
         password_hash,
         status: 'bekliyor'
@@ -156,6 +157,19 @@ export default function MembershipPage() {
               placeholder="ornek@email.com"
               className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+            Takım <span className="text-slate-400 font-normal">(isteğe bağlı)</span>
+          </label>
+          <input
+            value={form.team}
+            onChange={e => setForm(f => ({ ...f, team: e.target.value }))}
+            placeholder="Örn: Sağlıkçılar, Belediyespor, Eczacıbaşı…"
+            className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <p className="text-xs text-slate-400 mt-1">Hangi takımı veya grubu temsil ettiğinizi yazın.</p>
         </div>
 
         <div>

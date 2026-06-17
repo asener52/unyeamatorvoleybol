@@ -33,8 +33,10 @@ function MemberDropdown({ member, onLogout, unread }) {
       <button onClick={() => setOpen(o => !o)}
         className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg transition-colors text-sm font-semibold">
         <div className="relative">
-          <div className="w-7 h-7 rounded-full bg-gold-500 text-primary-900 flex items-center justify-center text-xs font-extrabold">
-            {initials}
+          <div className="w-7 h-7 rounded-full bg-gold-500 text-primary-900 flex items-center justify-center text-xs font-extrabold overflow-hidden">
+            {member.avatar_url
+              ? <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
+              : initials}
           </div>
           {unread > 0 && (
             <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5 leading-none">

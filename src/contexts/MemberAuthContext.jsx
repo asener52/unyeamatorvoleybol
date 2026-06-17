@@ -19,7 +19,7 @@ export function MemberAuthProvider({ children }) {
       .eq('password_hash', password_hash)
       .single()
     if (error || !data) throw new Error('Telefon numarası veya şifre hatalı.')
-    const session = { id: data.id, name: data.name, phone: data.phone, position: data.position, email: data.email }
+    const session = { id: data.id, name: data.name, phone: data.phone, position: data.position, email: data.email, avatar_url: data.avatar_url || null, team: data.team || null }
     localStorage.setItem('member_session', JSON.stringify(session))
     sessionStorage.setItem('member_verified', JSON.stringify(session))
     setMember(session)
