@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useCollection, deleteDocument } from '../../hooks/useFirestore'
 import { supabase } from '../../lib/supabase'
 import { hashPassword } from '../../lib/crypto'
-import { FaTrash, FaCheck, FaTimes, FaPhone, FaEnvelope, FaUser, FaEdit, FaLock } from 'react-icons/fa'
+import { FaTrash, FaCheck, FaTimes, FaPhone, FaEnvelope, FaUser, FaEdit, FaLock, FaStickyNote } from 'react-icons/fa'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
 
@@ -12,23 +12,23 @@ function formatDate(ts) {
 }
 
 const STATUS = {
-  bekliyor:  { label: 'Bekliyor',   cls: 'bg-yellow-100 text-yellow-700' },
-  approved:  { label: 'Onaylandı',  cls: 'bg-green-100 text-green-700' },
-  rejected:  { label: 'Reddedildi', cls: 'bg-red-100 text-red-700' },
+  bekliyor: { label: 'Bekliyor',   cls: 'bg-yellow-100 text-yellow-700' },
+  approved: { label: 'Onaylandı',  cls: 'bg-green-100 text-green-700' },
+  rejected: { label: 'Reddedildi', cls: 'bg-red-100 text-red-700' },
 }
 
 const ROLES = {
-  uye:              'Üye',
-  kaptan:           'Kaptan',
-  koordinator:      'Koordinatör',
-  yardimci_yonetici:'Yardımcı Yönetici',
+  uye:               'Üye',
+  kaptan:            'Kaptan',
+  koordinator:       'Koordinatör',
+  yardimci_yonetici: 'Yardımcı Yönetici',
 }
 
 const ROLE_CLS = {
-  uye:              'bg-slate-100 text-slate-600',
-  kaptan:           'bg-blue-100 text-blue-700',
-  koordinator:      'bg-purple-100 text-purple-700',
-  yardimci_yonetici:'bg-orange-100 text-orange-700',
+  uye:               'bg-slate-100 text-slate-600',
+  kaptan:            'bg-blue-100 text-blue-700',
+  koordinator:       'bg-purple-100 text-purple-700',
+  yardimci_yonetici: 'bg-orange-100 text-orange-700',
 }
 
 const POSITIONS = [
@@ -53,8 +53,9 @@ function EditModal({ member, onClose }) {
     status: member.status || 'bekliyor',
   })
   const [newPassword, setNewPassword] = useState('')
+  const [adminNote, setAdminNote] = useState(member.admin_note || '')
   const [saving, setSaving] = useState(false)
-  const [tab, setTab] = useState('info') // info | password
+  const [tab, setTab] = useState('info') // info | password | note
 
   async function handleSave(e) {
     e.preventDefault()
@@ -72,6 +73,9 @@ function EditModal({ member, onClose }) {
         if (newPassword.length < 6) { alert('Şifre en az 6 karakter olmalı'); setSaving(false); return }
         update.password_hash = await hashPassword(newPassword)
       }
+      if (tab === 'note') {
+        update.admin_note = adminNote.trim()
+      }
       const { error } = await supabase.from('members').update(update).eq('id', member.id)
       if (error) throw error
       onClose()
@@ -82,6 +86,12 @@ function EditModal({ member, onClose }) {
     }
   }
 
+  const TABS = [
+    ['info', FaUser, 'Bilgiler'],
+    ['password', FaLock, 'Şifre'],
+    ['note', FaStickyNote, 'Not'],
+  ]
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md my-8">
@@ -91,16 +101,18 @@ function EditModal({ member, onClose }) {
         </div>
 
         <div className="flex border-b border-slate-100">
-          {[['info', FaUser, 'Bilgiler'], ['password', FaLock, 'Şifre']].map(([key, Icon, label]) => (
+          {TABS.map(([key, Icon, label]) => (
             <button key={key} onClick={() => setTab(key)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-semibold border-b-2 transition-colors ${tab === key ? 'border-primary-600 text-primary-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+              className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-semibold border-b-2 transition-colors ${
+                tab === key ? 'border-primary-600 text-primary-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}>
               <Icon size={13} /> {label}
             </button>
           ))}
         </div>
 
         <form onSubmit={handleSave} className="p-5 space-y-3">
-          {tab === 'info' ? (
+          {tab === 'info' && (
             <>
               <div><label className="text-xs text-slate-500 mb-1 block">Ad Soyad</label>
                 <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inp} /></div>
@@ -125,12 +137,30 @@ function EditModal({ member, onClose }) {
                   </select></div>
               </div>
             </>
-          ) : (
+          )}
+
+          {tab === 'password' && (
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Yeni Şifre (en az 6 karakter)</label>
               <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
                 placeholder="Boş bırakırsanız şifre değişmez" className={inp} />
               <p className="text-xs text-slate-400 mt-2">Üyenin mevcut şifresini sıfırlayarak yenisini belirleyebilirsiniz.</p>
+            </div>
+          )}
+
+          {tab === 'note' && (
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Yönetici Notu</label>
+              <textarea
+                value={adminNote}
+                onChange={e => setAdminNote(e.target.value)}
+                rows={5}
+                placeholder="Bu not yalnızca yöneticiler tarafından görülebilir. Üye göremez."
+                className={`${inp} resize-none`}
+              />
+              <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2 flex items-center gap-1.5">
+                <FaStickyNote size={11} /> Bu not gizlidir. Üye hiçbir zaman göremez.
+              </p>
             </div>
           )}
 
@@ -197,9 +227,11 @@ export default function ManageMembers() {
       </div>
 
       <div className="flex gap-2 mb-4 flex-wrap">
-        {[['hepsi','Tümü'],['bekliyor','Bekleyenler'],['approved','Onaylılar'],['rejected','Reddedilenler']].map(([val,label]) => (
+        {[['hepsi','Tümü'],['bekliyor','Bekleyenler'],['approved','Onaylılar'],['rejected','Reddedilenler']].map(([val, label]) => (
           <button key={val} onClick={() => setFilter(val)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filter === val ? 'bg-primary-700 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-primary-300'}`}>
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              filter === val ? 'bg-primary-700 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-primary-300'
+            }`}>
             {label}
           </button>
         ))}
@@ -227,14 +259,22 @@ export default function ManageMembers() {
                 const st = STATUS[d.status] || STATUS.bekliyor
                 const roleCls = ROLE_CLS[d.role] || ROLE_CLS.uye
                 const roleLabel = ROLES[d.role] || 'Üye'
+                const hasNote = !!d.admin_note
                 return (
                   <tr key={d.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 text-xs font-bold shrink-0">
-                          {d.name?.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}
+                          {d.name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
                         </div>
-                        <span className="font-medium text-slate-800">{d.name}</span>
+                        <div>
+                          <span className="font-medium text-slate-800">{d.name}</span>
+                          {hasNote && (
+                            <span title={d.admin_note} className="ml-1.5 inline-flex items-center text-amber-500" style={{ cursor: 'help' }}>
+                              <FaStickyNote size={11} />
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-3 hidden sm:table-cell">
@@ -253,7 +293,7 @@ export default function ManageMembers() {
                         <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${roleCls}`}>{roleLabel}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-slate-400 text-xs hidden lg:table-cell">{formatDate(d.createdAt)}</td>
+                    <td className="px-4 py-3 text-slate-400 text-xs hidden lg:table-cell">{formatDate(d.createdAt || d.created_at)}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-semibold ${st.cls}`}>{st.label}</span>
                     </td>

@@ -26,6 +26,15 @@ export function MemberAuthProvider({ children }) {
     return session
   }
 
+  function updateSession(patch) {
+    setMember(prev => {
+      const updated = { ...prev, ...patch }
+      localStorage.setItem('member_session', JSON.stringify(updated))
+      sessionStorage.setItem('member_verified', JSON.stringify(updated))
+      return updated
+    })
+  }
+
   function logout() {
     localStorage.removeItem('member_session')
     sessionStorage.removeItem('member_verified')
@@ -33,7 +42,7 @@ export function MemberAuthProvider({ children }) {
   }
 
   return (
-    <MemberAuthContext.Provider value={{ member, login, logout }}>
+    <MemberAuthContext.Provider value={{ member, login, logout, updateSession }}>
       {children}
     </MemberAuthContext.Provider>
   )

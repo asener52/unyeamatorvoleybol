@@ -38,27 +38,57 @@ function PasswordInput({ label, value, onChange, placeholder, required }) {
   )
 }
 
+// Telefon girişini formatla: sadece rakam, max 10 hane
+function formatPhoneInput(raw) {
+  return raw.replace(/\D/g, '').slice(0, 10)
+}
+
 export default function MembershipPage() {
-  const [form, setForm] = useState({ name: '', phone: '', email: '', position: 'Dış Vurucu', password: '', confirmPassword: '' })
+  const [form, setForm] = useState({ name: '', phone: '', email: '', position: 'Pasör (Setter)', password: '', confirmPassword: '' })
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
 
+  function handlePhoneChange(e) {
+    const digits = formatPhoneInput(e.target.value)
+    setForm(f => ({ ...f, phone: digits }))
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
+
+    // Telefon validasyonu
+    if (form.phone.length !== 10) { setError('Telefon numarası 10 haneli olmalıdır (örn: 5551234567).'); return }
+    if (!form.phone.startsWith('5')) { setError('Telefon numarası 5 ile başlamalıdır.'); return }
+
     if (form.password.length < 6) { setError('Şifre en az 6 karakter olmalıdır.'); return }
     if (form.password !== form.confirmPassword) { setError('Şifreler eşleşmiyor.'); return }
+
+    const fullPhone = '+90' + form.phone
+
     setSaving(true)
     try {
+      // Mükerrer kayıt kontrolü
+      const { data: existing } = await supabase
+        .from('members')
+        .select('id')
+        .eq('phone', fullPhone)
+        .limit(1)
+      if (existing && existing.length > 0) {
+        setError('Bu telefon numarası zaten kayıtlı. Giriş yapmayı deneyin.')
+        setSaving(false)
+        return
+      }
+
       const password_hash = await hashPassword(form.password)
       const { error: err } = await supabase.from('members').insert([{
         name: form.name.trim(),
-        phone: form.phone.trim(),
+        phone: fullPhone,
         email: form.email.trim() || null,
         position: form.position,
         password_hash,
-        status: 'approved'
+        status: 'bekliyor'
       }])
       if (err) throw err
       setDone(true)
@@ -100,12 +130,22 @@ export default function MembershipPage() {
 
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-1.5">Telefon *</label>
-          <div className="relative">
-            <FaPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-            <input required type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-              placeholder="05XX XXX XX XX"
-              className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+          <div className="flex">
+            <span className="inline-flex items-center gap-1.5 px-3 bg-slate-100 border border-r-0 border-slate-300 rounded-l-lg text-sm text-slate-500 font-semibold select-none shrink-0">
+              <FaPhone size={12} /> +90
+            </span>
+            <input
+              required
+              type="tel"
+              inputMode="numeric"
+              value={form.phone}
+              onChange={handlePhoneChange}
+              placeholder="5XXXXXXXXX (10 hane)"
+              maxLength={10}
+              className="w-full px-3 py-2.5 border border-slate-300 rounded-r-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
           </div>
+          <p className="text-xs text-slate-400 mt-1">5 ile başlayan 10 haneli numaranızı girin. Başına +90 otomatik eklenir.</p>
         </div>
 
         <div>
