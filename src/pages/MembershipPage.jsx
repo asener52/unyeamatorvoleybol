@@ -82,15 +82,16 @@ export default function MembershipPage() {
       }
 
       const password_hash = await hashPassword(form.password)
-      const { error: err } = await supabase.from('members').insert([{
+      const payload = {
         name: form.name.trim(),
         phone: fullPhone,
         email: form.email.trim() || null,
-        team: form.team.trim() || null,
         position: form.position,
         password_hash,
         status: 'bekliyor'
-      }])
+      }
+      if (form.team.trim()) payload.team = form.team.trim()
+      const { error: err } = await supabase.from('members').insert([payload])
       if (err) throw err
       setDone(true)
     } catch (err) {

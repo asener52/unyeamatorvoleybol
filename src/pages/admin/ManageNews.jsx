@@ -5,8 +5,9 @@ import { supabase, uploadFile } from '../../lib/supabase'
 import { FaPlus, FaEdit, FaTrash, FaEye, FaEyeSlash, FaTimes, FaImage } from 'react-icons/fa'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
+import RichEditor from '../../components/admin/RichEditor'
 
-const CATEGORIES = ['Duyuru', 'Başarı', 'Turnuva', 'Üyelik', 'Antrenman', 'Genel']
+const CATEGORIES = ['Duyuru', 'Başarı', 'Maç', 'Turnuva', 'Üyelik', 'Antrenman', 'Genel']
 const EMPTY_FORM = { title: '', summary: '', content: '', category: 'Genel', imageUrl: '', published: false }
 
 function formatDate(ts) {
@@ -95,8 +96,7 @@ export default function ManageNews() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">İçerik</label>
-                <textarea rows={6} value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none font-mono" />
+                <RichEditor value={form.content} onChange={val => setForm(f => ({ ...f, content: val }))} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
