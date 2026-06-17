@@ -10,7 +10,7 @@ import { FaArrowRight, FaVolleyballBall } from 'react-icons/fa'
 
 export default function Home() {
   const { docs: news, loading: newsLoading } = usePublishedCollection('news', 4)
-  const { docs: events, loading: eventsLoading } = usePublishedCollection('events', 4)
+  const { docs: events, loading: eventsLoading } = usePublishedCollection('events', 4, 'date', true)
   const { docs: polls } = usePublishedCollection('polls', 1)
   const { settings } = useSettings()
 
