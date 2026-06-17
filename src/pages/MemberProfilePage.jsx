@@ -108,7 +108,7 @@ export default function MemberProfilePage() {
   }
 
   function openEdit() {
-    setForm({ name: member.name || '', email: member.email || '', position: member.position || POSITIONS[0], team: member.team || '' })
+    setForm({ name: member.name || '', phone: member.phone || '', email: member.email || '', position: member.position || POSITIONS[0], team: member.team || '' })
     setPwForm({ current: '', next: '', confirm: '' })
     setError('')
     setSuccess('')
@@ -122,14 +122,21 @@ export default function MemberProfilePage() {
     setSaving(true)
     setError('')
     try {
+      // Telefon değiştiyse mükerrer kontrol
+      const newPhone = form.phone.trim()
+      if (newPhone !== member.phone) {
+        const { data: existing } = await supabase.from('members').select('id').eq('phone', newPhone).limit(1)
+        if (existing && existing.length > 0) { setError('Bu telefon numarası başka bir üyeye ait.'); setSaving(false); return }
+      }
       const { error: err } = await supabase.from('members').update({
         name: form.name.trim(),
+        phone: newPhone,
         email: form.email.trim() || null,
         position: form.position,
         team: form.team?.trim() || null,
       }).eq('id', member.id)
       if (err) throw err
-      updateSession({ name: form.name.trim(), email: form.email.trim() || null, position: form.position, team: form.team?.trim() || null })
+      updateSession({ name: form.name.trim(), phone: newPhone, email: form.email.trim() || null, position: form.position, team: form.team?.trim() || null })
       setEditing(false)
     } catch (err) {
       setError('Hata: ' + err.message)
@@ -291,9 +298,10 @@ export default function MemberProfilePage() {
                       className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-500 mb-1">Telefon <span className="text-slate-300">(değiştirilemez)</span></label>
-                    <input readOnly value={member.phone}
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-400 cursor-not-allowed" />
+                    <label className="block text-xs text-slate-500 mb-1">Telefon</label>
+                    <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                      placeholder="+905XXXXXXXXX"
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
                   </div>
                   <div>
                     <label className="block text-xs text-slate-500 mb-1">E-posta</label>
