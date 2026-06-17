@@ -88,7 +88,7 @@ export default function MembershipPage() {
         email: form.email.trim() || null,
         position: form.position,
         password_hash,
-        status: 'bekliyor'
+        status: 'approved'
       }
       if (form.team.trim()) payload.team = form.team.trim()
       const { error: err } = await supabase.from('members').insert([payload])
