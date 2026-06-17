@@ -16,10 +16,11 @@ function formatEventDate(dateStr) {
 }
 
 const STATUS_CONFIG = {
-  bekliyor:    { label: 'Bekliyor',     cls: 'bg-yellow-100 text-yellow-700' },
-  as_kadro:    { label: 'As Kadro',     cls: 'bg-green-100 text-green-700' },
-  yedek_kadro: { label: 'Yedek Kadro', cls: 'bg-blue-100 text-blue-700' },
-  reddedildi:  { label: 'Reddedildi',  cls: 'bg-red-100 text-red-700' },
+  bekliyor:    { label: 'Bekliyor',      cls: 'bg-yellow-100 text-yellow-700' },
+  as_kadro:    { label: 'As Kadro',      cls: 'bg-green-100 text-green-700' },
+  yedek_kadro: { label: 'Yedek Kadro',  cls: 'bg-blue-100 text-blue-700' },
+  reddedildi:  { label: 'Reddedildi',   cls: 'bg-red-100 text-red-700' },
+  iptal:       { label: 'İptal Edildi', cls: 'bg-slate-100 text-slate-500' },
 }
 
 function RosterSection({ title, players, icon, color, emptyText }) {
@@ -115,9 +116,10 @@ export default function ManageMatchRequests() {
         yedek_kadro: [],
         bekliyor: [],
         reddedildi: [],
+        iptal: [],
       }
       const status = d.status || 'bekliyor'
-      if (map[key][status]) map[key][status].push(d)
+      if (map[key][status] !== undefined) map[key][status].push(d)
       else map[key].bekliyor.push(d)
     })
     return Object.values(map).sort((a, b) => (a.date || '').localeCompare(b.date || ''))
@@ -232,6 +234,17 @@ export default function ManageMatchRequests() {
                   emptyText=""
                 />
               )}
+
+              {/* İptal Edilenler - sadece varsa göster */}
+              {m.iptal.length > 0 && (
+                <RosterSection
+                  title="İptal Edilenler"
+                  players={m.iptal}
+                  icon={<FaTimes size={13} className="text-slate-400" />}
+                  color="bg-slate-50 text-slate-500"
+                  emptyText=""
+                />
+              )}
             </div>
           ))}
         </div>
@@ -247,6 +260,7 @@ export default function ManageMatchRequests() {
               { key: 'yedek_kadro', label: 'Yedek Kadro' },
               { key: 'bekliyor',    label: 'Bekleyenler' },
               { key: 'reddedildi',  label: 'Reddedilenler' },
+              { key: 'iptal',       label: 'İptal Edilenler' },
             ].map(({ key, label }) => (
               <button key={key} onClick={() => setFilter(key)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
@@ -335,6 +349,7 @@ export default function ManageMatchRequests() {
                             <option value="as_kadro">As Kadro</option>
                             <option value="yedek_kadro">Yedek Kadro</option>
                             <option value="reddedildi">Reddedildi</option>
+                            <option value="iptal">İptal Edildi</option>
                           </select>
                         </td>
                         <td className="px-4 py-3 text-right">
