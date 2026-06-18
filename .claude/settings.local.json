@@ -19,7 +19,10 @@
       "Bash(Get-Content D:\\\\_App\\\\amator_voleybol\\\\package.json)",
       "Bash(Select-String \"dev\")",
       "Bash(Get-ChildItem -Path \"D:\\\\_App\\\\amator_voleybol\" -Directory)",
-      "Bash(Select-Object Name)"
+      "Bash(Select-Object Name)",
+      "Bash(cat .env)",
+      "Bash(cat .env.local)",
+      "Bash(supabase --version)"
     ]
   }
 }
