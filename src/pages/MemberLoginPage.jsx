@@ -3,11 +3,9 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useMember } from '../contexts/MemberAuthContext'
 import { supabase } from '../lib/supabase'
 import { hashPassword } from '../lib/crypto'
-import { FaVolleyballBall, FaPhone, FaLock, FaSignInAlt, FaEye, FaEyeSlash, FaKey, FaCheckCircle, FaArrowLeft } from 'react-icons/fa'
+import { FaVolleyballBall, FaPhone, FaLock, FaSignInAlt, FaEye, FaEyeSlash, FaKey, FaCheckCircle, FaArrowLeft, FaEnvelope } from 'react-icons/fa'
 
-function generateCode() {
-  return Math.floor(100000 + Math.random() * 900000).toString()
-}
+const EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-reset-email`
 
 export default function MemberLoginPage() {
   const { login, member } = useMember()
@@ -21,16 +19,17 @@ export default function MemberLoginPage() {
   const [error, setError] = useState('')
 
   // Şifre sıfırlama state
-  const [resetStep, setResetStep] = useState(0) // 0=giriş 1=telefon gir 2=kod+yeni şifre 3=tamam
+  // resetStep: 0=giriş 1=telefon gir 2=kod+yeni şifre 3=tamam
+  const [resetStep, setResetStep] = useState(0)
   const [resetPhone, setResetPhone] = useState('')
-  const [resetCode, setResetCode] = useState('')      // kullanıcıya gösterilen kod
+  const [resetMemberId, setResetMemberId] = useState(null)
   const [enteredCode, setEnteredCode] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showNewPw, setShowNewPw] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [resetError, setResetError] = useState('')
-  const [resetMemberId, setResetMemberId] = useState(null)
+  const [maskedEmail, setMaskedEmail] = useState('')
 
   if (member) {
     navigate('/profil', { replace: true })
@@ -50,43 +49,72 @@ export default function MemberLoginPage() {
     }
   }
 
-  // Adım 1: Telefon numarasını doğrula ve kod üret
+  // Adım 1: Edge Function aracılığıyla e-posta gönder
   async function handleResetRequest(e) {
     e.preventDefault()
     setResetError(''); setResetLoading(true)
     try {
-      const { data, error: err } = await supabase
+      const res = await fetch(EDGE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ phone: resetPhone.trim() }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Bir hata oluştu.')
+
+      // Üyenin maskeli e-postasını göstermek için DB'den çek
+      const { data } = await supabase
         .from('members')
-        .select('id, name')
+        .select('id, email')
         .eq('phone', resetPhone.trim())
         .eq('status', 'approved')
         .single()
-      if (err || !data) { setResetError('Bu telefon numarasıyla kayıtlı onaylı üye bulunamadı.'); setResetLoading(false); return }
 
-      const code = generateCode()
+      if (data?.id) setResetMemberId(data.id)
+      if (data?.email) {
+        const [user, domain] = data.email.split('@')
+        setMaskedEmail(`${user.slice(0, 2)}***@${domain}`)
+      }
 
-      setResetCode(code)
-      setResetMemberId(data.id)
       setResetStep(2)
     } catch (err) {
-      setResetError('Bir hata oluştu: ' + err.message)
+      setResetError(err.message)
     } finally {
       setResetLoading(false)
     }
   }
 
-  // Adım 2: Kodu ve yeni şifreyi doğrula
+  // Adım 2: Kodu DB'deki hash ile karşılaştır, yeni şifreyi kaydet
   async function handleResetConfirm(e) {
     e.preventDefault()
     setResetError('')
     if (newPassword.length < 6) { setResetError('Şifre en az 6 karakter olmalıdır.'); return }
     if (newPassword !== confirmPassword) { setResetError('Şifreler eşleşmiyor.'); return }
-    if (enteredCode.trim() !== resetCode) { setResetError('Doğrulama kodu hatalı.'); return }
     setResetLoading(true)
     try {
+      const enteredHash = await hashPassword(enteredCode.trim())
+
+      const { data, error: err } = await supabase
+        .from('members')
+        .select('reset_token, reset_token_expires_at')
+        .eq('id', resetMemberId)
+        .single()
+      if (err || !data) throw new Error('Üye bulunamadı.')
+      if (data.reset_token !== enteredHash) { setResetError('Doğrulama kodu hatalı.'); setResetLoading(false); return }
+      if (new Date(data.reset_token_expires_at) < new Date()) { setResetError('Kodun süresi dolmuş. Lütfen tekrar deneyin.'); setResetLoading(false); return }
+
       const newHash = await hashPassword(newPassword)
-      const { error: err } = await supabase.from('members').update({ password_hash: newHash }).eq('id', resetMemberId)
-      if (err) throw err
+      const { error: updateErr } = await supabase.from('members').update({
+        password_hash: newHash,
+        reset_token: null,
+        reset_token_expires_at: null,
+      }).eq('id', resetMemberId)
+      if (updateErr) throw updateErr
+
       setResetStep(3)
     } catch (err) {
       setResetError('Bir hata oluştu: ' + err.message)
@@ -105,7 +133,7 @@ export default function MemberLoginPage() {
             <h1 className="text-2xl font-extrabold text-primary-900">Şifre Sıfırla</h1>
             <p className="text-slate-500 text-sm mt-1">
               {resetStep === 1 && 'Telefon numaranızı girin'}
-              {resetStep === 2 && 'Doğrulama kodunuzu ve yeni şifrenizi girin'}
+              {resetStep === 2 && 'E-postanıza gelen kodu ve yeni şifrenizi girin'}
               {resetStep === 3 && 'Şifreniz başarıyla güncellendi'}
             </p>
           </div>
@@ -123,12 +151,12 @@ export default function MemberLoginPage() {
                       placeholder="05XX XXX XX XX veya +90..."
                       className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">Kayıt olduğunuz telefon numarasını girin.</p>
+                  <p className="text-xs text-slate-400 mt-1">Kayıt olduğunuz telefon numarasını girin. Kod kayıtlı e-postanıza gönderilecek.</p>
                 </div>
                 {resetError && <p className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">{resetError}</p>}
                 <button type="submit" disabled={resetLoading}
                   className="w-full bg-primary-700 hover:bg-primary-800 disabled:opacity-60 text-white font-bold py-3 rounded-xl text-sm transition-colors">
-                  {resetLoading ? 'Kontrol ediliyor...' : 'Doğrulama Kodu Oluştur'}
+                  {resetLoading ? 'Gönderiliyor...' : 'Doğrulama Kodu Gönder'}
                 </button>
                 <button type="button" onClick={() => setResetStep(0)}
                   className="w-full flex items-center justify-center gap-1.5 text-slate-500 hover:text-slate-700 text-sm font-medium">
@@ -140,11 +168,12 @@ export default function MemberLoginPage() {
             {/* Adım 2 — Kod + Yeni Şifre */}
             {resetStep === 2 && (
               <form onSubmit={handleResetConfirm} className="space-y-4">
-                {/* Kod göster */}
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
-                  <p className="text-xs text-amber-700 font-semibold mb-2">Doğrulama Kodunuz</p>
-                  <p className="text-3xl font-extrabold tracking-[0.3em] text-amber-800">{resetCode}</p>
-                  <p className="text-xs text-amber-600 mt-2">Bu kodu not alın. 30 dakika geçerlidir.</p>
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3 items-start">
+                  <FaEnvelope className="text-blue-500 mt-0.5 shrink-0" size={16} />
+                  <div>
+                    <p className="text-sm font-semibold text-blue-800">Kod e-postanıza gönderildi</p>
+                    {maskedEmail && <p className="text-xs text-blue-600 mt-0.5">{maskedEmail} adresine 6 haneli kod gönderildi. 30 dakika geçerlidir.</p>}
+                  </div>
                 </div>
 
                 <div>
@@ -184,7 +213,7 @@ export default function MemberLoginPage() {
                   className="w-full bg-primary-700 hover:bg-primary-800 disabled:opacity-60 text-white font-bold py-3 rounded-xl text-sm transition-colors">
                   {resetLoading ? 'Güncelleniyor...' : 'Şifremi Güncelle'}
                 </button>
-                <button type="button" onClick={() => { setResetStep(1); setResetCode(''); setEnteredCode('') }}
+                <button type="button" onClick={() => { setResetStep(1); setEnteredCode('') }}
                   className="w-full flex items-center justify-center gap-1.5 text-slate-500 hover:text-slate-700 text-sm font-medium">
                   <FaArrowLeft size={11} /> Geri dön
                 </button>
@@ -196,7 +225,7 @@ export default function MemberLoginPage() {
               <div className="text-center space-y-4">
                 <FaCheckCircle className="text-green-500 text-5xl mx-auto" />
                 <p className="text-slate-600 text-sm">Şifreniz başarıyla güncellendi. Yeni şifrenizle giriş yapabilirsiniz.</p>
-                <button onClick={() => { setResetStep(0); setResetPhone(''); setNewPassword(''); setConfirmPassword('') }}
+                <button onClick={() => { setResetStep(0); setResetPhone(''); setNewPassword(''); setConfirmPassword(''); setEnteredCode('') }}
                   className="w-full bg-primary-700 hover:bg-primary-800 text-white font-bold py-3 rounded-xl text-sm transition-colors">
                   Giriş Yap
                 </button>
