@@ -64,13 +64,6 @@ export default function MemberLoginPage() {
       if (err || !data) { setResetError('Bu telefon numarasıyla kayıtlı onaylı üye bulunamadı.'); setResetLoading(false); return }
 
       const code = generateCode()
-      const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString() // 30 dk geçerli
-      const codeHash = await hashPassword(code)
-
-      await supabase.from('members').update({
-        reset_token: codeHash,
-        reset_token_expires_at: expiresAt,
-      }).eq('id', data.id)
 
       setResetCode(code)
       setResetMemberId(data.id)
@@ -88,25 +81,12 @@ export default function MemberLoginPage() {
     setResetError('')
     if (newPassword.length < 6) { setResetError('Şifre en az 6 karakter olmalıdır.'); return }
     if (newPassword !== confirmPassword) { setResetError('Şifreler eşleşmiyor.'); return }
+    if (enteredCode.trim() !== resetCode) { setResetError('Doğrulama kodu hatalı.'); return }
     setResetLoading(true)
     try {
-      const enteredHash = await hashPassword(enteredCode.trim())
-      const { data, error: err } = await supabase
-        .from('members')
-        .select('reset_token, reset_token_expires_at')
-        .eq('id', resetMemberId)
-        .single()
-      if (err || !data) throw new Error('Üye bulunamadı.')
-      if (data.reset_token !== enteredHash) { setResetError('Doğrulama kodu hatalı.'); setResetLoading(false); return }
-      if (new Date(data.reset_token_expires_at) < new Date()) { setResetError('Kod süresi dolmuş. Lütfen tekrar deneyin.'); setResetLoading(false); return }
-
       const newHash = await hashPassword(newPassword)
-      await supabase.from('members').update({
-        password_hash: newHash,
-        reset_token: null,
-        reset_token_expires_at: null,
-      }).eq('id', resetMemberId)
-
+      const { error: err } = await supabase.from('members').update({ password_hash: newHash }).eq('id', resetMemberId)
+      if (err) throw err
       setResetStep(3)
     } catch (err) {
       setResetError('Bir hata oluştu: ' + err.message)
