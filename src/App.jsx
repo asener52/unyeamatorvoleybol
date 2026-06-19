@@ -26,6 +26,7 @@ import ManageEvents from './pages/admin/ManageEvents'
 import ManagePolls from './pages/admin/ManagePolls'
 import ManageSettings from './pages/admin/ManageSettings'
 import ManageMatchRequests from './pages/admin/ManageMatchRequests'
+import MemberStats from './pages/admin/MemberStats'
 import ManageMembers from './pages/admin/ManageMembers'
 import ManageTournaments from './pages/admin/ManageTournaments'
 import ManageMessages from './pages/admin/ManageMessages'
@@ -58,6 +59,7 @@ function AdminPages() {
           <Route path="anketler" element={<ManagePolls />} />
           <Route path="ayarlar" element={<ManageSettings />} />
           <Route path="mac-talepleri" element={<ManageMatchRequests />} />
+          <Route path="uye-istatistikleri" element={<MemberStats />} />
           <Route path="uyeler" element={<ManageMembers />} />
           <Route path="turnuvalar" element={<ManageTournaments />} />
           <Route path="mesajlar" element={<ManageMessages />} />
