@@ -10,13 +10,24 @@ import { FaArrowRight, FaVolleyballBall } from 'react-icons/fa'
 
 export default function Home() {
   const { docs: news, loading: newsLoading } = usePublishedCollection('news', 4)
-  const { docs: events, loading: eventsLoading } = usePublishedCollection('events', 4, 'date', true)
+  const { docs: allEvents, loading: eventsLoading } = usePublishedCollection('events', 50, 'date', true)
   const { docs: polls } = usePublishedCollection('polls', 1)
   const { settings } = useSettings()
 
   const featuredNews = news[0]
   const sideNews = news.slice(1, 4)
   const poll = polls[0] || null
+
+  // Bu hafta + önümüzdeki hafta, bugünden itibaren (max 4)
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const weekStart = new Date()
+  const dow = weekStart.getDay()
+  weekStart.setDate(weekStart.getDate() - (dow === 0 ? 6 : dow - 1))
+  weekStart.setHours(0, 0, 0, 0)
+  const twoWeeksEnd = new Date(weekStart)
+  twoWeeksEnd.setDate(weekStart.getDate() + 14)
+  const endStr = twoWeeksEnd.toISOString().slice(0, 10)
+  const events = allEvents.filter(e => (e.date || '').slice(0, 10) >= todayStr && (e.date || '').slice(0, 10) < endStr).slice(0, 4)
 
   return (
     <div>
