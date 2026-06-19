@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { FaBars, FaTimes, FaVolleyballBall, FaUser, FaComments, FaSignOutAlt, FaSignInAlt } from 'react-icons/fa'
+import { FaBars, FaTimes, FaVolleyballBall, FaUser, FaComments, FaSignOutAlt, FaSignInAlt, FaInstagram, FaFacebook, FaYoutube, FaTwitter, FaWhatsapp, FaTiktok } from 'react-icons/fa'
 import { useSettings } from '../hooks/useSettings'
 import { useMember } from '../contexts/MemberAuthContext'
 import { useUnreadMessages } from '../hooks/useUnreadMessages'
@@ -117,6 +117,30 @@ export default function Navbar() {
                 {label}
               </NavLink>
             ))}
+            {/* Sosyal medya ikonları */}
+            {(() => {
+              const s = settings?.social || {}
+              const items = [
+                { url: s.instagram && `https://instagram.com/${s.instagram.replace(/^.*instagram\.com\//,'')}`, icon: <FaInstagram size={15} />, label: 'Instagram', raw: s.instagram },
+                { url: s.facebook,  icon: <FaFacebook size={15} />,  label: 'Facebook' },
+                { url: s.youtube,   icon: <FaYoutube size={15} />,   label: 'YouTube' },
+                { url: s.twitter,   icon: <FaTwitter size={15} />,   label: 'Twitter' },
+                { url: s.whatsapp && `https://wa.me/${s.whatsapp}`, icon: <FaWhatsapp size={15} />, label: 'WhatsApp', raw: s.whatsapp },
+                { url: s.tiktok,    icon: <FaTiktok size={15} />,    label: 'TikTok' },
+              ].filter(item => item.raw !== undefined ? item.raw : item.url)
+              if (!items.length) return null
+              return (
+                <div className="flex items-center gap-1 ml-2 pl-2 border-l border-white/20">
+                  {items.map(({ url, icon, label }) => url ? (
+                    <a key={label} href={url} target="_blank" rel="noopener noreferrer"
+                      title={label}
+                      className="p-1.5 text-blue-200 hover:text-white hover:bg-white/10 rounded-md transition-colors">
+                      {icon}
+                    </a>
+                  ) : null)}
+                </div>
+              )
+            })()}
           </div>
 
           {/* Sağ: üye girişi + mobil menü */}
