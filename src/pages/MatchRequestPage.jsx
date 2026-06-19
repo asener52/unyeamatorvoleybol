@@ -28,21 +28,14 @@ export default function MatchRequestPage() {
 
   useEffect(() => {
     async function fetchMatches() {
-      const now = new Date()
-      const day = now.getDay()
-      const weekStart = new Date(now)
-      weekStart.setDate(weekStart.getDate() + (day === 0 ? -6 : 1 - day))
-      weekStart.setHours(0, 0, 0, 0)
-      const twoWeeksEnd = new Date(weekStart)
-      twoWeeksEnd.setDate(twoWeeksEnd.getDate() + 14)
+      const today = new Date().toISOString().slice(0, 10)
 
       const { data } = await supabase
         .from('events')
         .select('id, title, date, time, location')
         .eq('type', 'Maç')
         .eq('published', true)
-        .gte('date', weekStart.toISOString().slice(0, 10))
-        .lt('date', twoWeeksEnd.toISOString().slice(0, 10))
+        .gte('date', today)
         .order('date', { ascending: true })
       setMatches(data || [])
       setLoadingMatches(false)
