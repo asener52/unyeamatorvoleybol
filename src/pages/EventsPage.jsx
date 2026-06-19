@@ -9,26 +9,25 @@ export default function EventsPage() {
   const { settings } = useSettings()
 
   const now = new Date()
+  const todayStr = now.toISOString().slice(0, 10)
 
-  // Bu haftanın Pazartesi 00:00'ı (hafta başı)
+  // İki hafta sonunun tarihi (bu hafta + önümüzdeki hafta)
   const weekStart = new Date(now)
-  const day = weekStart.getDay() // 0=Pazar, 1=Pzt...
-  const diffToMonday = (day === 0 ? -6 : 1 - day)
-  weekStart.setDate(weekStart.getDate() + diffToMonday)
+  const dow = weekStart.getDay()
+  weekStart.setDate(weekStart.getDate() - (dow === 0 ? 6 : dow - 1))
   weekStart.setHours(0, 0, 0, 0)
-
-  // İki hafta sonraki Pazartesi 00:00 (görünürlük sınırı)
   const twoWeeksEnd = new Date(weekStart)
-  twoWeeksEnd.setDate(twoWeeksEnd.getDate() + 14)
+  twoWeeksEnd.setDate(weekStart.getDate() + 14)
+  const endStr = twoWeeksEnd.toISOString().slice(0, 10)
 
   const upcoming = docs.filter(e => {
-    const d = e.date?.toDate ? e.date.toDate() : new Date(e.date)
-    return d >= weekStart && d < twoWeeksEnd
+    const d = (e.date || '').slice(0, 10)
+    return d >= todayStr && d < endStr
   })
   const past = docs.filter(e => {
-    const d = e.date?.toDate ? e.date.toDate() : new Date(e.date)
-    return d < weekStart
-  })
+    const d = (e.date || '').slice(0, 10)
+    return d < todayStr
+  }).reverse() // en yeniden eskiye
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
