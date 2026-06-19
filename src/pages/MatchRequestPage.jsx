@@ -28,7 +28,19 @@ export default function MatchRequestPage() {
 
   useEffect(() => {
     async function fetchMatches() {
-      const today = new Date().toISOString().slice(0, 10)
+      const now = new Date()
+      const today = now.toISOString().slice(0, 10)
+
+      // Bu haftanın pazartesisi
+      const day = now.getDay()
+      const weekStart = new Date(now)
+      weekStart.setDate(now.getDate() - (day === 0 ? 6 : day - 1))
+      weekStart.setHours(0, 0, 0, 0)
+
+      // Önümüzdeki haftanın pazarı (2 hafta sonu)
+      const twoWeeksEnd = new Date(weekStart)
+      twoWeeksEnd.setDate(weekStart.getDate() + 14)
+      const endDate = twoWeeksEnd.toISOString().slice(0, 10)
 
       const { data } = await supabase
         .from('events')
@@ -36,6 +48,7 @@ export default function MatchRequestPage() {
         .eq('type', 'Maç')
         .eq('published', true)
         .gte('date', today)
+        .lt('date', endDate)
         .order('date', { ascending: true })
       setMatches(data || [])
       setLoadingMatches(false)
