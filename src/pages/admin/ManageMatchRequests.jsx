@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useCollection } from '../../hooks/useFirestore'
-import { FaTrash, FaVolleyballBall, FaPhone, FaUser, FaTimes, FaClock, FaSort, FaSortUp, FaSortDown, FaChartBar, FaCalendarAlt, FaStar, FaShieldAlt } from 'react-icons/fa'
+import { FaTrash, FaVolleyballBall, FaPhone, FaUser, FaTimes, FaClock, FaSort, FaSortUp, FaSortDown, FaChartBar, FaCalendarAlt, FaStar, FaShieldAlt, FaChevronDown, FaChevronRight } from 'react-icons/fa'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
 
@@ -63,6 +63,13 @@ export default function ManageMatchRequests() {
   const [view, setView] = useState('liste') // 'liste' | 'mac'
   const [sortField, setSortField] = useState('event_date')
   const [sortDir, setSortDir] = useState('asc')
+  const [openGroups, setOpenGroups] = useState({})
+
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), [])
+
+  const toggleGroup = useCallback(key => {
+    setOpenGroups(prev => ({ ...prev, [key]: !prev[key] }))
+  }, [])
 
   async function setStatus(id, status) {
     await supabase.from('match_requests').update({ status }).eq('id', id)
@@ -86,7 +93,8 @@ export default function ManageMatchRequests() {
   }
 
   const filtered = useMemo(() => {
-    let list = filter === 'hepsi' ? docs : docs.filter(d => d.type === filter || d.status === filter)
+    let list = docs.filter(d => (d.event_date || '') >= today)
+    if (filter !== 'hepsi') list = list.filter(d => d.type === filter || d.status === filter)
     list = [...list].sort((a, b) => {
       let va, vb
       if (sortField === 'event_date') {
@@ -104,10 +112,10 @@ export default function ManageMatchRequests() {
     return list
   }, [docs, filter, sortField, sortDir])
 
-  // Maç bazlı gruplama: her etkinlik için kişi listeleri
+  // Maç bazlı gruplama: sadece gelecek etkinlikler
   const matchGroups = useMemo(() => {
     const map = {}
-    docs.forEach(d => {
+    docs.filter(d => (d.event_date || '') >= today).forEach(d => {
       const key = d.event_id || '__no_event__'
       if (!map[key]) map[key] = {
         title: d.event_title || 'Belirtilmemiş',
@@ -176,77 +184,87 @@ export default function ManageMatchRequests() {
             <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="h-40 bg-slate-200 animate-pulse rounded-2xl" />)}</div>
           ) : matchGroups.length === 0 ? (
             <div className="text-center py-16 text-slate-400">Talep bulunamadı.</div>
-          ) : matchGroups.map((m, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-              {/* Maç başlığı */}
-              <div className="flex items-start justify-between gap-4 pb-4 border-b border-slate-100">
-                <div>
-                  <div className="font-extrabold text-slate-800 text-base">{m.title}</div>
-                  {m.date && (
-                    <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                      <FaCalendarAlt size={10} /> {formatEventDate(m.date)}
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-2 shrink-0 text-xs font-semibold">
-                  <span className="bg-green-50 text-green-700 px-2.5 py-1 rounded-full">{m.as_kadro.length} As</span>
-                  <span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full">{m.yedek_kadro.length} Yedek</span>
-                  <span className="bg-yellow-50 text-yellow-700 px-2.5 py-1 rounded-full">{m.bekliyor.length} Bekliyor</span>
-                </div>
+          ) : matchGroups.map((m, i) => {
+            const key = m.date + '_' + i
+            const isOpen = !!openGroups[key]
+            const total = m.as_kadro.length + m.yedek_kadro.length + m.bekliyor.length + m.reddedildi.length + m.iptal.length
+            return (
+              <div key={key} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                {/* Accordion başlık — tıklanabilir */}
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(key)}
+                  className="w-full flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors text-left"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-extrabold text-slate-800 text-base truncate">{m.title}</div>
+                    {m.date && (
+                      <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                        <FaCalendarAlt size={10} /> {formatEventDate(m.date)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 shrink-0 text-xs font-semibold">
+                    <span className="bg-green-50 text-green-700 px-2.5 py-1 rounded-full">{m.as_kadro.length} As</span>
+                    <span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full">{m.yedek_kadro.length} Yedek</span>
+                    <span className="bg-yellow-50 text-yellow-700 px-2.5 py-1 rounded-full">{m.bekliyor.length} Bekliyor</span>
+                    <span className="bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full">{total} Toplam</span>
+                  </div>
+                  {isOpen
+                    ? <FaChevronDown size={13} className="text-slate-400 shrink-0" />
+                    : <FaChevronRight size={13} className="text-slate-400 shrink-0" />
+                  }
+                </button>
+
+                {/* Accordion içerik */}
+                {isOpen && (
+                  <div className="px-5 pb-5 border-t border-slate-100">
+                    <RosterSection
+                      title="As Kadro"
+                      players={m.as_kadro}
+                      icon={<FaStar size={13} className="text-green-600" />}
+                      color="bg-green-50 text-green-800"
+                      emptyText="Henüz as kadroya alınan yok."
+                    />
+                    <RosterSection
+                      title="Yedek Kadro"
+                      players={m.yedek_kadro}
+                      icon={<FaShieldAlt size={13} className="text-blue-600" />}
+                      color="bg-blue-50 text-blue-800"
+                      emptyText="Henüz yedek kadroya alınan yok."
+                    />
+                    {m.bekliyor.length > 0 && (
+                      <RosterSection
+                        title="Bekleyenler"
+                        players={m.bekliyor}
+                        icon={<FaClock size={13} className="text-yellow-600" />}
+                        color="bg-yellow-50 text-yellow-800"
+                        emptyText=""
+                      />
+                    )}
+                    {m.reddedildi.length > 0 && (
+                      <RosterSection
+                        title="Reddedilenler"
+                        players={m.reddedildi}
+                        icon={<FaTimes size={13} className="text-red-500" />}
+                        color="bg-red-50 text-red-700"
+                        emptyText=""
+                      />
+                    )}
+                    {m.iptal.length > 0 && (
+                      <RosterSection
+                        title="İptal Edilenler"
+                        players={m.iptal}
+                        icon={<FaTimes size={13} className="text-slate-400" />}
+                        color="bg-slate-50 text-slate-500"
+                        emptyText=""
+                      />
+                    )}
+                  </div>
+                )}
               </div>
-
-              {/* As Kadro */}
-              <RosterSection
-                title="As Kadro"
-                players={m.as_kadro}
-                icon={<FaStar size={13} className="text-green-600" />}
-                color="bg-green-50 text-green-800"
-                emptyText="Henüz as kadroya alınan yok."
-              />
-
-              {/* Yedek Kadro */}
-              <RosterSection
-                title="Yedek Kadro"
-                players={m.yedek_kadro}
-                icon={<FaShieldAlt size={13} className="text-blue-600" />}
-                color="bg-blue-50 text-blue-800"
-                emptyText="Henüz yedek kadroya alınan yok."
-              />
-
-              {/* Bekleyenler - sadece varsa göster */}
-              {m.bekliyor.length > 0 && (
-                <RosterSection
-                  title="Bekleyenler"
-                  players={m.bekliyor}
-                  icon={<FaClock size={13} className="text-yellow-600" />}
-                  color="bg-yellow-50 text-yellow-800"
-                  emptyText=""
-                />
-              )}
-
-              {/* Reddedilenler - sadece varsa göster */}
-              {m.reddedildi.length > 0 && (
-                <RosterSection
-                  title="Reddedilenler"
-                  players={m.reddedildi}
-                  icon={<FaTimes size={13} className="text-red-500" />}
-                  color="bg-red-50 text-red-700"
-                  emptyText=""
-                />
-              )}
-
-              {/* İptal Edilenler - sadece varsa göster */}
-              {m.iptal.length > 0 && (
-                <RosterSection
-                  title="İptal Edilenler"
-                  players={m.iptal}
-                  icon={<FaTimes size={13} className="text-slate-400" />}
-                  color="bg-slate-50 text-slate-500"
-                  emptyText=""
-                />
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : (
         /* Liste görünümü */

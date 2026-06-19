@@ -5,7 +5,6 @@ import { supabase } from '../lib/supabase'
 import { hashPassword } from '../lib/crypto'
 import { FaVolleyballBall, FaPhone, FaLock, FaSignInAlt, FaEye, FaEyeSlash, FaKey, FaCheckCircle, FaArrowLeft, FaEnvelope } from 'react-icons/fa'
 
-const EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-reset-email`
 
 export default function MemberLoginPage() {
   const { login, member } = useMember()
@@ -54,17 +53,11 @@ export default function MemberLoginPage() {
     e.preventDefault()
     setResetError(''); setResetLoading(true)
     try {
-      const res = await fetch(EDGE_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ phone: resetPhone.trim() }),
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('send-reset-email', {
+        body: { phone: resetPhone.trim() },
       })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Bir hata oluştu.')
+      if (fnError) throw new Error(fnError.message || 'Bir hata oluştu.')
+      if (fnData?.error) throw new Error(fnData.error)
 
       // Üyenin maskeli e-postasını göstermek için DB'den çek
       const { data } = await supabase
