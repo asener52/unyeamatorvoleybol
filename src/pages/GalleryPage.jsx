@@ -15,6 +15,12 @@ function getLiked() {
 function saveLiked(set) {
   localStorage.setItem('gallery_liked', JSON.stringify([...set]))
 }
+function getStoredCounts() {
+  try { return JSON.parse(localStorage.getItem('gallery_counts') || '{}') } catch { return {} }
+}
+function saveStoredCounts(obj) {
+  localStorage.setItem('gallery_counts', JSON.stringify(obj))
+}
 
 const SOCIAL_ICONS = {
   facebook:  { Icon: FaFacebook,  href: v => v },
@@ -159,16 +165,20 @@ export default function GalleryPage() {
   const { settings } = useSettings()
   const [lightbox, setLightbox] = useState(null)
   const [liked, setLiked] = useState(getLiked)
-  // likeCounts: images yüklenince initialize edilir, sonra sadece manuel update
-  const [likeCounts, setLikeCounts] = useState({})
+  // likeCounts: localStorage'dan başlat (sayfa yenilenince kaybolmaz)
+  const [likeCounts, setLikeCounts] = useState(getStoredCounts)
 
-  // images yüklenince beğeni sayılarını başlat (daha önce set edilmemişleri)
+  // images yüklenince: localStorage'da olmayan yeni öğeleri DB değeriyle başlat
   useEffect(() => {
     if (images.length === 0) return
     setLikeCounts(prev => {
       const next = { ...prev }
-      images.forEach(img => { if (!(img.id in next)) next[img.id] = img.likes ?? 0 })
-      return next
+      let changed = false
+      images.forEach(img => {
+        if (!(img.id in next)) { next[img.id] = img.likes ?? 0; changed = true }
+      })
+      if (changed) saveStoredCounts(next)
+      return changed ? next : prev
     })
   }, [images])
 
@@ -181,8 +191,12 @@ export default function GalleryPage() {
     const isLiked = liked.has(id)
     const current = likeCounts[id] ?? 0
     const newCount = isLiked ? Math.max(0, current - 1) : current + 1
-    // Önce state güncelle (realtime yok, DB sonucu state'i ezmez)
-    setLikeCounts(prev => ({ ...prev, [id]: newCount }))
+    // State + localStorage güncelle (sayfa yenilenince de kalır)
+    setLikeCounts(prev => {
+      const next = { ...prev, [id]: newCount }
+      saveStoredCounts(next)
+      return next
+    })
     const next = new Set(liked)
     isLiked ? next.delete(id) : next.add(id)
     setLiked(next)
