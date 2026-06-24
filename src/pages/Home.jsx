@@ -4,14 +4,14 @@ import NewsCard from '../components/NewsCard'
 import EventCard from '../components/EventCard'
 import PollCard from '../components/PollCard'
 import SectionHeader from '../components/SectionHeader'
-import { usePublishedCollection } from '../hooks/useFirestore'
+import { usePublishedCollection, useStaticCollection } from '../hooks/useFirestore'
 import { useSettings } from '../hooks/useSettings'
 import { FaArrowRight, FaVolleyballBall } from 'react-icons/fa'
 
 export default function Home() {
-  const { docs: news, loading: newsLoading } = usePublishedCollection('news', 4)
-  const { docs: allEvents, loading: eventsLoading } = usePublishedCollection('events', 50, 'date', true)
-  const { docs: polls } = usePublishedCollection('polls', 1)
+  const { docs: news, loading: newsLoading } = useStaticCollection('news', 4)
+  const { docs: allEvents, loading: eventsLoading } = useStaticCollection('events', 50, 'date', true)
+  const { docs: polls } = useStaticCollection('polls', 1)
   const { settings } = useSettings()
 
   const featuredNews = news[0]

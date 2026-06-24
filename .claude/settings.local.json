@@ -22,7 +22,11 @@
       "Bash(Select-Object Name)",
       "Bash(cat .env)",
       "Bash(cat .env.local)",
-      "Bash(supabase --version)"
+      "Bash(supabase --version)",
+      "Bash(sed -i \"s/usePublishedCollection\\('events'/useStaticCollection\\('events'/g\" \"D:\\\\_App\\\\amator_voleybol\\\\src\\\\pages\\\\EventsPage.jsx\")",
+      "Bash(sed -i \"s/usePublishedCollection\\('news'/useStaticCollection\\('news'/g\" \"D:\\\\_App\\\\amator_voleybol\\\\src\\\\pages\\\\NewsPage.jsx\")",
+      "Bash(sed -i \"s/usePublishedCollection\\('polls'/useStaticCollection\\('polls'/g\" \"D:\\\\_App\\\\amator_voleybol\\\\src\\\\pages\\\\PollsPage.jsx\")",
+      "Bash(sed -i \"s/usePublishedCollection\\('sliders'/useStaticCollection\\('sliders'/g\" \"D:\\\\_App\\\\amator_voleybol\\\\src\\\\components\\\\HeroSlider.jsx\")"
     ]
   }
 }

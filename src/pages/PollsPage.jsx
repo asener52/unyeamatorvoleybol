@@ -1,6 +1,6 @@
 import PollCard from '../components/PollCard'
 import SectionHeader from '../components/SectionHeader'
-import { usePublishedCollection } from '../hooks/useFirestore'
+import { usePublishedCollection, useStaticCollection } from '../hooks/useFirestore'
 import { useSettings } from '../hooks/useSettings'
 import { FaFacebook, FaInstagram, FaYoutube, FaTwitter, FaWhatsapp, FaTiktok } from 'react-icons/fa'
 
@@ -14,7 +14,7 @@ const SOCIAL_ICONS = {
 }
 
 export default function PollsPage() {
-  const { docs: polls, loading } = usePublishedCollection('polls', 50)
+  const { docs: polls, loading } = useStaticCollection('polls', 50)
   const { settings } = useSettings()
   const social = settings?.social || {}
   const activeSocials = Object.entries(SOCIAL_ICONS).filter(([key]) => social[key])

@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
-import { usePublishedCollection } from '../hooks/useFirestore'
+import { usePublishedCollection, useStaticCollection } from '../hooks/useFirestore'
 import { FaChevronLeft, FaChevronRight, FaVolleyballBall } from 'react-icons/fa'
 
 export default function HeroSlider() {
-  const { docs: slides, loading } = usePublishedCollection('sliders', 50, 'order', true)
+  const { docs: slides, loading } = useStaticCollection('sliders', 50, 'order', true)
   const [current, setCurrent] = useState(0)
 
   const next = useCallback(() => {

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import SectionHeader from '../components/SectionHeader'
-import { usePublishedCollection } from '../hooks/useFirestore'
+import { usePublishedCollection, useStaticCollection } from '../hooks/useFirestore'
 import { useSettings } from '../hooks/useSettings'
 import { supabase } from '../lib/supabase'
 import {
@@ -154,11 +154,24 @@ function PanoramaViewer({ src }) {
 
 // ─── Ana sayfa ─────────────────────────────────────────────────────────────
 export default function GalleryPage() {
-  const { docs: images, loading } = usePublishedCollection('gallery', 100, 'order', true)
+  // useStaticCollection: realtime yok, kota tasarrufu
+  const { docs: images, loading } = useStaticCollection('gallery', 100, 'order', true)
   const { settings } = useSettings()
   const [lightbox, setLightbox] = useState(null)
   const [liked, setLiked] = useState(getLiked)
-  const [likeCounts, setLikeCounts] = useState({}) // id → optimistic count
+  // likeCounts: images yüklenince initialize edilir, sonra sadece manuel update
+  const [likeCounts, setLikeCounts] = useState({})
+
+  // images yüklenince beğeni sayılarını başlat (daha önce set edilmemişleri)
+  useEffect(() => {
+    if (images.length === 0) return
+    setLikeCounts(prev => {
+      const next = { ...prev }
+      images.forEach(img => { if (!(img.id in next)) next[img.id] = img.likes ?? 0 })
+      return next
+    })
+  }, [images])
+
   const social = settings?.social || {}
   const activeSocials = Object.entries(SOCIAL_ICONS).filter(([key]) => social[key])
 
@@ -166,14 +179,16 @@ export default function GalleryPage() {
     e.stopPropagation()
     const id = img.id
     const isLiked = liked.has(id)
-    const current = likeCounts[id] ?? img.likes ?? 0
-    // Optimistic update
-    setLikeCounts(prev => ({ ...prev, [id]: isLiked ? Math.max(0, current - 1) : current + 1 }))
+    const current = likeCounts[id] ?? 0
+    const newCount = isLiked ? Math.max(0, current - 1) : current + 1
+    // Önce state güncelle (realtime yok, DB sonucu state'i ezmez)
+    setLikeCounts(prev => ({ ...prev, [id]: newCount }))
     const next = new Set(liked)
     isLiked ? next.delete(id) : next.add(id)
     setLiked(next)
     saveLiked(next)
-    await supabase.from('gallery').update({ likes: isLiked ? Math.max(0, current - 1) : current + 1 }).eq('id', id)
+    // DB güncelle (hata olsa bile UI doğru kalır)
+    supabase.from('gallery').update({ likes: newCount }).eq('id', id)
   }
 
   function prev() { setLightbox(i => (i - 1 + images.length) % images.length) }

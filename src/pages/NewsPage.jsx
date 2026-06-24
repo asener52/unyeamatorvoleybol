@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NewsCard from '../components/NewsCard'
 import SectionHeader from '../components/SectionHeader'
-import { usePublishedCollection } from '../hooks/useFirestore'
+import { usePublishedCollection, useStaticCollection } from '../hooks/useFirestore'
 import { useSettings } from '../hooks/useSettings'
 import { FaArrowLeft, FaCalendarAlt, FaTag, FaFacebook, FaInstagram, FaYoutube, FaTwitter, FaWhatsapp, FaTiktok } from 'react-icons/fa'
 import { format } from 'date-fns'
@@ -81,7 +81,7 @@ function NewsDetail({ id }) {
 
 export default function NewsPage() {
   const { id } = useParams()
-  const { docs: news, loading } = usePublishedCollection('news', 50)
+  const { docs: news, loading } = useStaticCollection('news', 50)
   const { settings } = useSettings()
   const social = settings?.social || {}
   const activeSocials = Object.entries(SOCIAL_ICONS).filter(([key]) => social[key])

@@ -23,14 +23,7 @@ export function SettingsProvider({ children }) {
 
   useEffect(() => {
     fetchSettings()
-
-    const channelName = `settings_global_${Math.random().toString(36).slice(2)}`
-    const channel = supabase
-      .channel(channelName)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, fetchSettings)
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
+    // Settings nadiren güncellenir; realtime yerine sayfa yüklenince tek fetch yeterli
   }, [])
 
   // Tarayıcı sekme başlığını dinamik güncelle

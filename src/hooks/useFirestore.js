@@ -54,6 +54,31 @@ export function useCollection(tableName, orderField = 'created_at', limitCount =
   return { docs, loading, error }
 }
 
+// Realtime YOK — kota tasarrufu için public sayfalarda kullan (tek seferlik fetch)
+export function useStaticCollection(tableName, limitCount = 20, orderField = 'created_at', ascending = false) {
+  const [docs, setDocs] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    supabase
+      .from(tableName)
+      .select('*')
+      .eq('published', true)
+      .order(orderField, { ascending })
+      .limit(limitCount)
+      .then(({ data, error: err }) => {
+        if (cancelled) return
+        if (err) console.error(`[Supabase] ${tableName}:`, err.message)
+        setDocs((data || []).map(normalize))
+        setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [tableName, limitCount, orderField, ascending])
+
+  return { docs, loading }
+}
+
 export function usePublishedCollection(tableName, limitCount = 20, orderField = 'created_at', ascending = false) {
   const [docs, setDocs] = useState([])
   const [loading, setLoading] = useState(true)

@@ -25,6 +25,7 @@ export function useUnreadMessages(memberId) {
       .select('id, sender_id, receiver_id, created_at')
       .neq('sender_id', memberId)
       .or(`receiver_id.eq.${memberId},receiver_id.is.null`)
+      .limit(200) // kota tasarrufu: son 200 mesaja bak
 
     if (!data) return
 
