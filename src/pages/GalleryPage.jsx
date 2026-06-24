@@ -2,11 +2,19 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import SectionHeader from '../components/SectionHeader'
 import { usePublishedCollection } from '../hooks/useFirestore'
 import { useSettings } from '../hooks/useSettings'
+import { supabase } from '../lib/supabase'
 import {
   FaTimes, FaChevronLeft, FaChevronRight,
   FaFacebook, FaInstagram, FaYoutube, FaTwitter, FaWhatsapp, FaTiktok,
-  FaGlobeAmericas
+  FaGlobeAmericas, FaHeart
 } from 'react-icons/fa'
+
+function getLiked() {
+  try { return new Set(JSON.parse(localStorage.getItem('gallery_liked') || '[]')) } catch { return new Set() }
+}
+function saveLiked(set) {
+  localStorage.setItem('gallery_liked', JSON.stringify([...set]))
+}
 
 const SOCIAL_ICONS = {
   facebook:  { Icon: FaFacebook,  href: v => v },
@@ -146,11 +154,27 @@ function PanoramaViewer({ src }) {
 
 // ─── Ana sayfa ─────────────────────────────────────────────────────────────
 export default function GalleryPage() {
-  const { docs: images, loading } = usePublishedCollection('gallery', 100)
+  const { docs: images, loading } = usePublishedCollection('gallery', 100, 'order', true)
   const { settings } = useSettings()
   const [lightbox, setLightbox] = useState(null)
+  const [liked, setLiked] = useState(getLiked)
+  const [likeCounts, setLikeCounts] = useState({}) // id → optimistic count
   const social = settings?.social || {}
   const activeSocials = Object.entries(SOCIAL_ICONS).filter(([key]) => social[key])
+
+  async function toggleLike(e, img) {
+    e.stopPropagation()
+    const id = img.id
+    const isLiked = liked.has(id)
+    const current = likeCounts[id] ?? img.likes ?? 0
+    // Optimistic update
+    setLikeCounts(prev => ({ ...prev, [id]: isLiked ? Math.max(0, current - 1) : current + 1 }))
+    const next = new Set(liked)
+    isLiked ? next.delete(id) : next.add(id)
+    setLiked(next)
+    saveLiked(next)
+    await supabase.from('gallery').update({ likes: isLiked ? Math.max(0, current - 1) : current + 1 }).eq('id', id)
+  }
 
   function prev() { setLightbox(i => (i - 1 + images.length) % images.length) }
   function next() { setLightbox(i => (i + 1) % images.length) }
@@ -188,6 +212,14 @@ export default function GalleryPage() {
                   <span className="text-gold-400">360°</span>
                 </div>
               )}
+              {/* Beğeni butonu */}
+              <button
+                onClick={e => toggleLike(e, img)}
+                className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-black/50 hover:bg-black/70 text-white px-2 py-1 rounded-full text-xs font-semibold transition-all"
+              >
+                <FaHeart size={11} className={liked.has(img.id) ? 'text-red-400' : 'text-white/60'} />
+                <span>{likeCounts[img.id] ?? img.likes ?? 0}</span>
+              </button>
               {img.title && (
                 <div className="absolute inset-0 bg-primary-900/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
                   <span className="text-white text-sm font-semibold">{img.title}</span>

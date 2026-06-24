@@ -184,13 +184,17 @@ export default function ManageMembers() {
   const { docs, loading } = useCollection('members', 'created_at', 200)
   const [editMember, setEditMember] = useState(null)
   const [filter, setFilter] = useState('hepsi')
+  const [sortByName, setSortByName] = useState(false)
 
   const counts = {
     bekliyor: docs.filter(d => d.status === 'bekliyor').length,
     approved: docs.filter(d => d.status === 'approved').length,
   }
 
-  const filtered = filter === 'hepsi' ? docs : docs.filter(d => d.status === filter)
+  const base = filter === 'hepsi' ? docs : docs.filter(d => d.status === filter)
+  const filtered = sortByName
+    ? [...base].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'))
+    : base
 
   async function setStatus(id, status) {
     const { error } = await supabase.from('members').update({ status }).eq('id', id)
@@ -226,7 +230,7 @@ export default function ManageMembers() {
         </div>
       </div>
 
-      <div className="flex gap-2 mb-4 flex-wrap">
+      <div className="flex gap-2 mb-4 flex-wrap items-center">
         {[['hepsi','Tümü'],['bekliyor','Bekleyenler'],['approved','Onaylılar'],['rejected','Reddedilenler']].map(([val, label]) => (
           <button key={val} onClick={() => setFilter(val)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
@@ -235,6 +239,14 @@ export default function ManageMembers() {
             {label}
           </button>
         ))}
+        <div className="ml-auto">
+          <button onClick={() => setSortByName(s => !s)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              sortByName ? 'bg-gold-500 text-primary-900' : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300'
+            }`}>
+            <FaUser size={10} /> A→Z
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -246,7 +258,9 @@ export default function ManageMembers() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="text-left px-4 py-3 font-semibold text-slate-600">Ad Soyad</th>
+                <th className="text-left px-4 py-3 font-semibold text-slate-600 cursor-pointer select-none hover:text-primary-700" onClick={() => setSortByName(s => !s)}>
+                  Ad Soyad {sortByName ? '↑' : <span className="text-slate-300">↕</span>}
+                </th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600 hidden sm:table-cell">İletişim</th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600 hidden md:table-cell">Pozisyon / Rol</th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600 hidden lg:table-cell">Tarih</th>

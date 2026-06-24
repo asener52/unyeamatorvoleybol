@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useCollection } from '../../hooks/useFirestore'
 import { FaTrash, FaVolleyballBall, FaPhone, FaUser, FaTimes, FaClock, FaSort, FaSortUp, FaSortDown, FaChartBar, FaCalendarAlt, FaStar, FaShieldAlt, FaChevronDown, FaChevronRight } from 'react-icons/fa'
@@ -63,6 +63,28 @@ export default function ManageMatchRequests() {
   const [view, setView] = useState('liste') // 'liste' | 'mac'
   const [sortField, setSortField] = useState('event_date')
   const [sortDir, setSortDir] = useState('asc')
+
+  // Sütun sırası — localStorage'dan yükle
+  const DEFAULT_COLS = ['name', 'phone', 'type', 'match', 'event_date', 'created_at', 'status']
+  const [colOrder, setColOrder] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('mmr_col_order')) || DEFAULT_COLS } catch { return DEFAULT_COLS }
+  })
+  const dragColIdx = useRef(null)
+  const dragOverColIdx = useRef(null)
+
+  function onColDragStart(e, i) { dragColIdx.current = i; e.dataTransfer.effectAllowed = 'move' }
+  function onColDragOver(e, i) { e.preventDefault(); dragOverColIdx.current = i }
+  function onColDrop(e, i) {
+    e.preventDefault()
+    const from = dragColIdx.current
+    if (from === null || from === i) return
+    const next = [...colOrder]
+    const [col] = next.splice(from, 1)
+    next.splice(i, 0, col)
+    setColOrder(next)
+    localStorage.setItem('mmr_col_order', JSON.stringify(next))
+    dragColIdx.current = null
+  }
   const [openGroups, setOpenGroups] = useState({})
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), [])
@@ -133,10 +155,12 @@ export default function ManageMatchRequests() {
     return Object.values(map).sort((a, b) => (a.date || '').localeCompare(b.date || ''))
   }, [docs])
 
-  const asKadroCount    = docs.filter(d => d.status === 'as_kadro').length
-  const yedekKadroCount = docs.filter(d => d.status === 'yedek_kadro').length
-  const bekliyorCount   = docs.filter(d => d.status === 'bekliyor').length
-  const reddedildiCount = docs.filter(d => d.status === 'reddedildi').length
+  // Sadece mevcut/gelecek maçlardaki talepler
+  const currentDocs = useMemo(() => docs.filter(d => (d.event_date || '') >= today), [docs, today])
+  const asKadroCount    = currentDocs.filter(d => d.status === 'as_kadro').length
+  const yedekKadroCount = currentDocs.filter(d => d.status === 'yedek_kadro').length
+  const bekliyorCount   = currentDocs.filter(d => d.status === 'bekliyor').length
+  const reddedildiCount = currentDocs.filter(d => d.status === 'reddedildi').length
 
   return (
     <div>
@@ -300,23 +324,45 @@ export default function ManageMatchRequests() {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className="text-left px-4 py-3 font-semibold text-slate-600">Ad Soyad</th>
-                    <th className="text-left px-4 py-3 font-semibold text-slate-600">Telefon</th>
-                    <th className="text-left px-4 py-3 font-semibold text-slate-600 hidden sm:table-cell">Tür</th>
-                    <th className="text-left px-4 py-3 font-semibold text-slate-600 hidden lg:table-cell">Maç</th>
-                    <th
-                      className="text-left px-4 py-3 font-semibold text-slate-600 hidden md:table-cell cursor-pointer select-none"
-                      onClick={() => toggleSort('event_date')}
-                    >
-                      Etkinlik Tarihi <SortIcon field="event_date" />
-                    </th>
-                    <th
-                      className="text-left px-4 py-3 font-semibold text-slate-600 hidden xl:table-cell cursor-pointer select-none"
-                      onClick={() => toggleSort('created_at')}
-                    >
-                      Başvuru Tarihi <SortIcon field="created_at" />
-                    </th>
-                    <th className="text-left px-4 py-3 font-semibold text-slate-600">Durum</th>
+                    {colOrder.map((col, i) => {
+                      const base = 'px-4 py-3 font-semibold text-slate-600 text-left select-none cursor-grab active:cursor-grabbing whitespace-nowrap'
+                      if (col === 'name') return (
+                        <th key={col} draggable onDragStart={e => onColDragStart(e, i)} onDragOver={e => onColDragOver(e, i)} onDrop={e => onColDrop(e, i)} className={base}>
+                          ⠿ Ad Soyad
+                        </th>
+                      )
+                      if (col === 'phone') return (
+                        <th key={col} draggable onDragStart={e => onColDragStart(e, i)} onDragOver={e => onColDragOver(e, i)} onDrop={e => onColDrop(e, i)} className={base}>
+                          ⠿ Telefon
+                        </th>
+                      )
+                      if (col === 'type') return (
+                        <th key={col} draggable onDragStart={e => onColDragStart(e, i)} onDragOver={e => onColDragOver(e, i)} onDrop={e => onColDrop(e, i)} className={`${base} hidden sm:table-cell`}>
+                          ⠿ Tür
+                        </th>
+                      )
+                      if (col === 'match') return (
+                        <th key={col} draggable onDragStart={e => onColDragStart(e, i)} onDragOver={e => onColDragOver(e, i)} onDrop={e => onColDrop(e, i)} className={`${base} hidden lg:table-cell`}>
+                          ⠿ Maç
+                        </th>
+                      )
+                      if (col === 'event_date') return (
+                        <th key={col} draggable onDragStart={e => onColDragStart(e, i)} onDragOver={e => onColDragOver(e, i)} onDrop={e => onColDrop(e, i)} className={`${base} hidden md:table-cell`} onClick={() => toggleSort('event_date')}>
+                          ⠿ Etkinlik Tarihi <SortIcon field="event_date" />
+                        </th>
+                      )
+                      if (col === 'created_at') return (
+                        <th key={col} draggable onDragStart={e => onColDragStart(e, i)} onDragOver={e => onColDragOver(e, i)} onDrop={e => onColDrop(e, i)} className={`${base} hidden xl:table-cell`} onClick={() => toggleSort('created_at')}>
+                          ⠿ Başvuru Tarihi <SortIcon field="created_at" />
+                        </th>
+                      )
+                      if (col === 'status') return (
+                        <th key={col} draggable onDragStart={e => onColDragStart(e, i)} onDragOver={e => onColDragOver(e, i)} onDrop={e => onColDrop(e, i)} className={base}>
+                          ⠿ Durum
+                        </th>
+                      )
+                      return null
+                    })}
                     <th className="text-right px-4 py-3 font-semibold text-slate-600">İşlem</th>
                   </tr>
                 </thead>
@@ -326,50 +372,67 @@ export default function ManageMatchRequests() {
                     const { label, cls } = STATUS_CONFIG[status] || STATUS_CONFIG.bekliyor
                     return (
                       <tr key={d.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <FaUser size={12} className="text-slate-300" />
-                            <span className="font-medium text-slate-800">{d.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <a href={`tel:${d.phone}`} className="flex items-center gap-1.5 text-primary-600 hover:text-primary-800 transition-colors">
-                            <FaPhone size={11} /> {d.phone}
-                          </a>
-                        </td>
-                        <td className="px-4 py-3 hidden sm:table-cell">
-                          <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-semibold ${
-                            d.type === 'oyuncu' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
-                          }`}>
-                            {d.type === 'oyuncu' ? <FaVolleyballBall size={10} /> : '👁'}
-                            {d.type === 'oyuncu' ? 'Oyuncu' : 'Seyirci'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 hidden lg:table-cell">
-                          {d.event_title
-                            ? <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full font-medium">{d.event_title}</span>
-                            : <span className="text-slate-300 text-xs">—</span>
-                          }
-                        </td>
-                        <td className="px-4 py-3 text-slate-600 text-xs hidden md:table-cell font-medium">
-                          {d.event_date ? formatEventDate(d.event_date) : <span className="text-slate-300">—</span>}
-                        </td>
-                        <td className="px-4 py-3 text-slate-400 text-xs hidden xl:table-cell">
-                          {formatDate(d.created_at || d.createdAt)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <select
-                            value={status}
-                            onChange={e => setStatus(d.id, e.target.value)}
-                            className={`text-xs px-2 py-1 rounded-full font-semibold border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-400 ${cls}`}
-                          >
-                            <option value="bekliyor">Bekliyor</option>
-                            <option value="as_kadro">As Kadro</option>
-                            <option value="yedek_kadro">Yedek Kadro</option>
-                            <option value="reddedildi">Reddedildi</option>
-                            <option value="iptal">İptal Edildi</option>
-                          </select>
-                        </td>
+                        {colOrder.map(col => {
+                          if (col === 'name') return (
+                            <td key={col} className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <FaUser size={12} className="text-slate-300" />
+                                <span className="font-medium text-slate-800">{d.name}</span>
+                              </div>
+                            </td>
+                          )
+                          if (col === 'phone') return (
+                            <td key={col} className="px-4 py-3">
+                              <a href={`tel:${d.phone}`} className="flex items-center gap-1.5 text-primary-600 hover:text-primary-800 transition-colors">
+                                <FaPhone size={11} /> {d.phone}
+                              </a>
+                            </td>
+                          )
+                          if (col === 'type') return (
+                            <td key={col} className="px-4 py-3 hidden sm:table-cell">
+                              <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-semibold ${
+                                d.type === 'oyuncu' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                              }`}>
+                                {d.type === 'oyuncu' ? <FaVolleyballBall size={10} /> : '👁'}
+                                {d.type === 'oyuncu' ? 'Oyuncu' : 'Seyirci'}
+                              </span>
+                            </td>
+                          )
+                          if (col === 'match') return (
+                            <td key={col} className="px-4 py-3 hidden lg:table-cell">
+                              {d.event_title
+                                ? <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full font-medium">{d.event_title}</span>
+                                : <span className="text-slate-300 text-xs">—</span>
+                              }
+                            </td>
+                          )
+                          if (col === 'event_date') return (
+                            <td key={col} className="px-4 py-3 text-slate-600 text-xs hidden md:table-cell font-medium">
+                              {d.event_date ? formatEventDate(d.event_date) : <span className="text-slate-300">—</span>}
+                            </td>
+                          )
+                          if (col === 'created_at') return (
+                            <td key={col} className="px-4 py-3 text-slate-400 text-xs hidden xl:table-cell">
+                              {formatDate(d.created_at || d.createdAt)}
+                            </td>
+                          )
+                          if (col === 'status') return (
+                            <td key={col} className="px-4 py-3">
+                              <select
+                                value={status}
+                                onChange={e => setStatus(d.id, e.target.value)}
+                                className={`text-xs px-2 py-1 rounded-full font-semibold border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-400 ${cls}`}
+                              >
+                                <option value="bekliyor">Bekliyor</option>
+                                <option value="as_kadro">As Kadro</option>
+                                <option value="yedek_kadro">Yedek Kadro</option>
+                                <option value="reddedildi">Reddedildi</option>
+                                <option value="iptal">İptal Edildi</option>
+                              </select>
+                            </td>
+                          )
+                          return null
+                        })}
                         <td className="px-4 py-3 text-right">
                           <button onClick={() => handleDelete(d.id)}
                             className="text-red-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded-lg transition-colors">

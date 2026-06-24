@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useCollection, addDocument, updateDocument, deleteDocument } from '../../hooks/useFirestore'
 import { uploadFile } from '../../lib/supabase'
-import { FaPlus, FaTrash, FaEye, FaEyeSlash, FaTimes, FaImage, FaUpload, FaVideo, FaPlay, FaGlobeAmericas } from 'react-icons/fa'
+import { FaPlus, FaTrash, FaEye, FaEyeSlash, FaTimes, FaImage, FaUpload, FaVideo, FaPlay, FaGlobeAmericas, FaGripVertical, FaSave } from 'react-icons/fa'
 
 function getYoutubeThumbnail(url) {
   const m = url.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)
@@ -51,7 +51,7 @@ function UrlPreview({ url, mediaType }) {
 }
 
 export default function ManageGallery() {
-  const { docs, loading } = useCollection('gallery')
+  const { docs, loading } = useCollection('gallery', 'order', 200, true)
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
   const [type, setType] = useState('image')
@@ -60,6 +60,41 @@ export default function ManageGallery() {
   const [imgPreview, setImgPreview] = useState('')
   const [published, setPublished] = useState(true)
   const [saving, setSaving] = useState(false)
+
+  // Sürükle-bırak sıralama
+  const [ordered, setOrdered] = useState([])
+  const [orderDirty, setOrderDirty] = useState(false)
+  const [savingOrder, setSavingOrder] = useState(false)
+  const dragIdx = useRef(null)
+  const [dragOver, setDragOver] = useState(null)
+
+  useEffect(() => { setOrdered(docs); setOrderDirty(false) }, [docs])
+
+  function onDragStart(e, i) { dragIdx.current = i; e.dataTransfer.effectAllowed = 'move' }
+  function onDragOver(e, i) { e.preventDefault(); setDragOver(i) }
+  function onDragLeave() { setDragOver(null) }
+  function onDrop(e, i) {
+    e.preventDefault()
+    const from = dragIdx.current
+    if (from === null || from === i) { setDragOver(null); return }
+    const next = [...ordered]
+    const [moved] = next.splice(from, 1)
+    next.splice(i, 0, moved)
+    setOrdered(next)
+    setOrderDirty(true)
+    dragIdx.current = null
+    setDragOver(null)
+  }
+  async function saveOrder() {
+    setSavingOrder(true)
+    try {
+      await Promise.all(ordered.map((d, i) =>
+        updateDocument('gallery', d.id, { order: i + 1, title: d.title, url: d.url, type: d.type, published: d.published })
+      ))
+      setOrderDirty(false)
+    } catch (err) { alert('Sıra kaydedilemedi: ' + err.message) }
+    finally { setSavingOrder(false) }
+  }
 
   function resetForm() {
     setTitle(''); setType('image'); setImgFile(null); setImgUrl(''); setImgPreview(''); setPublished(true)
@@ -88,7 +123,8 @@ export default function ManageGallery() {
       let url = imgUrl
       if (imgFile) url = await uploadFile('gallery', imgFile.name, imgFile)
       if (!url) { alert('Görsel/video seçin veya URL girin'); setSaving(false); return }
-      await addDocument('gallery', { title, url, type, published })
+      const nextOrder = ordered.length > 0 ? Math.max(...ordered.map(d => d.order || 0)) + 1 : 1
+      await addDocument('gallery', { title, url, type, published, order: nextOrder })
       setShowForm(false); resetForm()
     } catch (err) {
       alert('Hata: ' + err.message)
@@ -113,10 +149,18 @@ export default function ManageGallery() {
           <h1 className="text-2xl font-extrabold text-slate-800">Galeri</h1>
           <p className="text-slate-500 text-sm mt-0.5">{docs.length} öğe</p>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true) }}
-          className="flex items-center gap-2 bg-primary-700 hover:bg-primary-800 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors">
-          <FaPlus size={13} /> Medya Ekle
-        </button>
+        <div className="flex gap-2">
+          {orderDirty && (
+            <button onClick={saveOrder} disabled={savingOrder}
+              className="flex items-center gap-2 bg-gold-500 hover:bg-gold-600 text-primary-900 px-4 py-2 rounded-lg font-semibold text-sm transition-colors">
+              <FaSave size={13} /> {savingOrder ? 'Kaydediliyor...' : 'Sırayı Kaydet'}
+            </button>
+          )}
+          <button onClick={() => { resetForm(); setShowForm(true) }}
+            className="flex items-center gap-2 bg-primary-700 hover:bg-primary-800 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors">
+            <FaPlus size={13} /> Medya Ekle
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -235,32 +279,49 @@ export default function ManageGallery() {
       ) : docs.length === 0 ? (
         <div className="text-center py-16 text-slate-400">Henüz medya eklenmemiş.</div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {docs.map(d => {
-            const isVideo = d.type === 'video'
-            const thumb = isVideo ? getYoutubeThumbnail(d.url) : null
-            return (
-              <div key={d.id} className="group relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
-                {isVideo ? (
-                  thumb ? <img src={thumb} alt={d.title || ''} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-slate-300"><FaVideo size={32} /></div>
-                ) : (
-                  d.url ? <img src={d.url} alt={d.title || ''} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-slate-300"><FaImage size={32} /></div>
-                )}
-                {isVideo && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="w-10 h-10 bg-black/50 rounded-full flex items-center justify-center"><FaPlay className="text-white ml-0.5" size={14} /></div></div>}
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-3">
-                  <button onClick={() => togglePublish(d)} className={`p-2 rounded-full ${d.published ? 'bg-green-500' : 'bg-slate-500'} text-white hover:scale-110 transition-transform`}>
-                    {d.published ? <FaEye size={14} /> : <FaEyeSlash size={14} />}
-                  </button>
-                  <button onClick={() => handleDelete(d.id)} className="p-2 rounded-full bg-red-500 text-white hover:scale-110 transition-transform"><FaTrash size={14} /></button>
+        <>
+          {orderDirty && <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">Sıralamanız değişti. Kaydetmek için "Sırayı Kaydet" butonuna tıklayın.</p>}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {ordered.map((d, i) => {
+              const isVideo = d.type === 'video'
+              const thumb = isVideo ? getYoutubeThumbnail(d.url) : null
+              return (
+                <div
+                  key={d.id}
+                  draggable
+                  onDragStart={e => onDragStart(e, i)}
+                  onDragOver={e => onDragOver(e, i)}
+                  onDragLeave={onDragLeave}
+                  onDrop={e => onDrop(e, i)}
+                  className={`group relative aspect-square overflow-hidden rounded-xl border-2 bg-slate-100 transition-all ${
+                    dragOver === i ? 'border-primary-500 scale-105' : 'border-slate-200'
+                  }`}
+                >
+                  {isVideo ? (
+                    thumb ? <img src={thumb} alt={d.title || ''} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-slate-300"><FaVideo size={32} /></div>
+                  ) : (
+                    d.url ? <img src={d.url} alt={d.title || ''} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-slate-300"><FaImage size={32} /></div>
+                  )}
+                  {/* Sıra no */}
+                  <div className="absolute top-2 left-2 bg-black/60 text-white text-xs font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
+                    <FaGripVertical size={9} className="text-slate-300" /> {d.order || i + 1}
+                  </div>
+                  {isVideo && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="w-10 h-10 bg-black/50 rounded-full flex items-center justify-center"><FaPlay className="text-white ml-0.5" size={14} /></div></div>}
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-3">
+                    <button onClick={() => togglePublish(d)} className={`p-2 rounded-full ${d.published ? 'bg-green-500' : 'bg-slate-500'} text-white hover:scale-110 transition-transform`}>
+                      {d.published ? <FaEye size={14} /> : <FaEyeSlash size={14} />}
+                    </button>
+                    <button onClick={() => handleDelete(d.id)} className="p-2 rounded-full bg-red-500 text-white hover:scale-110 transition-transform"><FaTrash size={14} /></button>
+                  </div>
+                  {d.title && <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs px-2 py-1 truncate">{d.title}</div>}
+                  {!d.published && <div className="absolute top-2 right-2 bg-slate-700/80 text-white text-xs px-2 py-0.5 rounded">Taslak</div>}
+                  {isVideo && <div className="absolute bottom-6 right-2 bg-red-600/80 text-white text-xs px-2 py-0.5 rounded">Video</div>}
+                  {d.type === 'panoramic' && <div className="absolute bottom-6 right-2 bg-primary-700/90 text-white text-xs px-2 py-0.5 rounded font-semibold">360°</div>}
                 </div>
-                {d.title && <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs px-2 py-1 truncate">{d.title}</div>}
-                {!d.published && <div className="absolute top-2 left-2 bg-slate-700/80 text-white text-xs px-2 py-0.5 rounded">Taslak</div>}
-                {isVideo && <div className="absolute top-2 right-2 bg-red-600/80 text-white text-xs px-2 py-0.5 rounded">Video</div>}
-                {d.type === 'panoramic' && <div className="absolute top-2 right-2 bg-primary-700/90 text-white text-xs px-2 py-0.5 rounded font-semibold">360°</div>}
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        </>
       )}
     </div>
   )

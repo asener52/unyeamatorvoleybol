@@ -4,6 +4,15 @@ import { hashPassword } from '../lib/crypto'
 
 const MemberAuthContext = createContext(null)
 
+// Her formatta girilen telefonu +90XXXXXXXXXX formatına normalize et
+function normalizePhone(raw) {
+  const digits = String(raw).trim().replace(/\D/g, '')
+  if (digits.length === 10) return '+90' + digits                          // 5XXXXXXXXX
+  if (digits.length === 11 && digits.startsWith('0')) return '+90' + digits.slice(1) // 05XXXXXXXXX
+  if (digits.length === 12 && digits.startsWith('90')) return '+' + digits // 905XXXXXXXXX
+  return raw.trim()
+}
+
 export function MemberAuthProvider({ children }) {
   const [member, setMember] = useState(() => {
     try { return JSON.parse(localStorage.getItem('member_session')) } catch { return null }
@@ -14,7 +23,7 @@ export function MemberAuthProvider({ children }) {
     const { data, error } = await supabase
       .from('members')
       .select('*')
-      .eq('phone', phone.trim())
+      .eq('phone', normalizePhone(phone))
       .eq('status', 'approved')
       .eq('password_hash', password_hash)
       .single()
