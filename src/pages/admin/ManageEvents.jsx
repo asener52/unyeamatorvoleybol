@@ -24,9 +24,10 @@ const EMPTY_FORM = {
   location: '', capacity: '', imageUrl: '', published: false,
   // tekrarlayan
   recurring: false,
-  recurDays: [],   // [1,4] => pazartesi ve perşembe
+  recurDays: [],
   recurStart: '',
   recurEnd: '',
+  applyImageToAll: false, // toplu resim uygulama
 }
 
 function parseTimeRange(time) {
@@ -139,8 +140,17 @@ export default function ManageEvents() {
         }
       } else {
         const data = { ...base, date: form.dateStr || null }
-        if (editId) await updateDocument('events', editId, data)
-        else await addDocument('events', data)
+        if (editId) {
+          await updateDocument('events', editId, data)
+          // Toplu resim güncelleme
+          if (form.applyImageToAll && imageUrl) {
+            for (const doc of docs) {
+              if (doc.id !== editId) await updateDocument('events', doc.id, { imageUrl })
+            }
+          }
+        } else {
+          await addDocument('events', data)
+        }
       }
       setShowForm(false)
     } catch (err) {
@@ -350,6 +360,13 @@ export default function ManageEvents() {
                 <input value={form.imageUrl} onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))}
                   placeholder="ya da URL yapıştırın"
                   className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                {editId && (
+                  <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                    <input type="checkbox" checked={form.applyImageToAll} onChange={e => setForm(f => ({ ...f, applyImageToAll: e.target.checked }))}
+                      className="w-4 h-4 rounded text-primary-600" />
+                    <span className="text-sm text-slate-600">Tüm etkinliklere uygula</span>
+                  </label>
+                )}
               </div>
 
               <label className="flex items-center gap-2 cursor-pointer">

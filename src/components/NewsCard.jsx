@@ -43,7 +43,7 @@ export default function NewsCard({ news, featured = false }) {
 
   return (
     <Link to={`/haberler/${news.id}`} className="group flex bg-white rounded-xl overflow-hidden shadow hover:shadow-md transition-shadow duration-300 border border-slate-100">
-      <div className="w-36 sm:w-44 shrink-0 overflow-hidden">
+      <div className="w-36 sm:w-44 h-28 sm:h-32 shrink-0 overflow-hidden">
         <img
           src={news.imageUrl || 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=400&q=70'}
           alt={news.title}
