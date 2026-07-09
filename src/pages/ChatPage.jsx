@@ -61,6 +61,8 @@ export default function ChatPage() {
     }
 
     loadMessages()
+    // Sayfaya/konuşmaya girilince hemen okundu say → badge temizlenir
+    if (member?.id) markConversationRead(member.id, receiverId ?? 'group')
 
     const channelName = `messages_${receiverId ?? 'group'}_${Math.random().toString(36).slice(2)}`
     const channel = supabase.channel(channelName)

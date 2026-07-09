@@ -6,7 +6,10 @@ function getLastRead(memberId, convId) {
 }
 
 export function markConversationRead(memberId, convId) {
-  if (memberId) localStorage.setItem(`msg_read_${memberId}_${convId}`, new Date().toISOString())
+  if (!memberId) return
+  localStorage.setItem(`msg_read_${memberId}_${convId}`, new Date().toISOString())
+  // storage olayı aynı sekmede tetiklenmez; manuel dispatch ile hook'ları uyar
+  window.dispatchEvent(new Event('storage'))
 }
 
 // Geriye dönük uyumluluk için
@@ -44,11 +47,17 @@ export function useUnreadMessages(memberId) {
 
   useEffect(() => {
     refresh()
+    // Yeni mesaj gelince yenile
     const ch = supabase
       .channel(`unread_${memberId}_${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, refresh)
       .subscribe()
-    return () => supabase.removeChannel(ch)
+    // Başka sekme/component localStorage'ı değiştirince (markConversationRead) yenile
+    window.addEventListener('storage', refresh)
+    return () => {
+      supabase.removeChannel(ch)
+      window.removeEventListener('storage', refresh)
+    }
   }, [memberId, refresh])
 
   return state
