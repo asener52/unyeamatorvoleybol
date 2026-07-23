@@ -18,16 +18,25 @@ const WEEKDAYS = [
   { key: 0, label: 'Paz' },
 ]
 
+const APPLY_FILTER_OPTIONS = [
+  { value: 'all',        label: 'Tüm etkinlikler' },
+  { value: 'weekday',    label: 'Aynı haftanın günü (örn: tüm Perşembeler)' },
+  { value: 'same_date',  label: 'Aynı tarih' },
+  { value: 'date_range', label: 'Tarih aralığı' },
+]
+
 const EMPTY_FORM = {
   title: '', description: '', type: 'Antrenman',
   dateStr: '', timeStart: '', timeEnd: '',
   location: '', capacity: '', imageUrl: '', published: false,
-  // tekrarlayan
   recurring: false,
   recurDays: [],
   recurStart: '',
   recurEnd: '',
-  applyImageToAll: false, // toplu resim uygulama
+  applyImageToAll: false,
+  applyFilter: 'all',
+  applyRangeStart: '',
+  applyRangeEnd: '',
 }
 
 function parseTimeRange(time) {
@@ -142,11 +151,24 @@ export default function ManageEvents() {
         const data = { ...base, date: form.dateStr || null }
         if (editId) {
           await updateDocument('events', editId, data)
-          // Toplu resim güncelleme
           if (form.applyImageToAll && imageUrl) {
-            for (const doc of docs) {
-              if (doc.id !== editId) await updateDocument('events', doc.id, { imageUrl })
-            }
+            const editedDate = form.dateStr ? new Date(form.dateStr) : null
+            const targets = docs.filter(d => {
+              if (d.id === editId) return false
+              if (form.applyFilter === 'all') return true
+              if (form.applyFilter === 'weekday' && editedDate) {
+                return d.date && new Date(d.date).getDay() === editedDate.getDay()
+              }
+              if (form.applyFilter === 'same_date' && form.dateStr) {
+                return d.date && String(d.date).slice(0, 10) === form.dateStr
+              }
+              if (form.applyFilter === 'date_range' && form.applyRangeStart && form.applyRangeEnd) {
+                const date = d.date ? new Date(d.date) : null
+                return date && isWithinInterval(date, { start: new Date(form.applyRangeStart), end: new Date(form.applyRangeEnd) })
+              }
+              return false
+            })
+            for (const d of targets) await updateDocument('events', d.id, { imageUrl })
           }
         } else {
           await addDocument('events', data)
@@ -361,11 +383,53 @@ export default function ManageEvents() {
                   placeholder="ya da URL yapıştırın"
                   className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
                 {editId && (
-                  <label className="flex items-center gap-2 mt-2 cursor-pointer">
-                    <input type="checkbox" checked={form.applyImageToAll} onChange={e => setForm(f => ({ ...f, applyImageToAll: e.target.checked }))}
-                      className="w-4 h-4 rounded text-primary-600" />
-                    <span className="text-sm text-slate-600">Tüm etkinliklere uygula</span>
-                  </label>
+                  <div className="mt-2 space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={form.applyImageToAll}
+                        onChange={e => setForm(f => ({ ...f, applyImageToAll: e.target.checked }))}
+                        className="w-4 h-4 rounded text-primary-600" />
+                      <span className="text-sm text-slate-600 font-medium">Toplu uygula</span>
+                    </label>
+                    {form.applyImageToAll && (
+                      <div className="ml-6 space-y-2 border-l-2 border-primary-200 pl-3">
+                        {APPLY_FILTER_OPTIONS.map(opt => (
+                          <label key={opt.value} className="flex items-start gap-2 cursor-pointer">
+                            <input type="radio" name="applyFilter" value={opt.value}
+                              checked={form.applyFilter === opt.value}
+                              onChange={() => setForm(f => ({ ...f, applyFilter: opt.value }))}
+                              className="mt-0.5 w-3.5 h-3.5 text-primary-600" />
+                            <span className="text-xs text-slate-600">{opt.label}</span>
+                          </label>
+                        ))}
+                        {form.applyFilter === 'date_range' && (
+                          <div className="grid grid-cols-2 gap-2 mt-1">
+                            <div>
+                              <label className="block text-xs text-slate-500 mb-0.5">Başlangıç</label>
+                              <input type="date" value={form.applyRangeStart}
+                                onChange={e => setForm(f => ({ ...f, applyRangeStart: e.target.value }))}
+                                className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-slate-500 mb-0.5">Bitiş</label>
+                              <input type="date" value={form.applyRangeEnd}
+                                onChange={e => setForm(f => ({ ...f, applyRangeEnd: e.target.value }))}
+                                className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                            </div>
+                          </div>
+                        )}
+                        {form.applyFilter === 'weekday' && form.dateStr && (
+                          <p className="text-xs text-primary-600 font-medium">
+                            Tüm {['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'][new Date(form.dateStr).getDay()]} günkü etkinliklere uygulanacak
+                          </p>
+                        )}
+                        {form.applyFilter === 'same_date' && form.dateStr && (
+                          <p className="text-xs text-primary-600 font-medium">
+                            {formatDate(form.dateStr)} tarihli etkinliklere uygulanacak
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 

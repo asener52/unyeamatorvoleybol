@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { hashPassword } from '../lib/crypto'
-import { FaVolleyballBall, FaUser, FaPhone, FaEnvelope, FaLock, FaCheckCircle, FaEye, FaEyeSlash } from 'react-icons/fa'
+import { FaVolleyballBall, FaUser, FaPhone, FaEnvelope, FaLock, FaCheckCircle, FaEye, FaEyeSlash, FaBriefcase, FaCalendarAlt } from 'react-icons/fa'
 
 const POSITIONS = [
   'Pasör (Setter)',
@@ -44,7 +44,7 @@ function formatPhoneInput(raw) {
 }
 
 export default function MembershipPage() {
-  const [form, setForm] = useState({ name: '', phone: '', email: '', team: '', position: 'Pasör (Setter)', password: '', confirmPassword: '' })
+  const [form, setForm] = useState({ name: '', phone: '', email: '', team: '', position: 'Pasör (Setter)', birthDate: '', occupation: '', password: '', confirmPassword: '' })
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
@@ -91,6 +91,8 @@ export default function MembershipPage() {
         status: 'approved'
       }
       if (form.team.trim()) payload.team = form.team.trim()
+      if (form.birthDate) payload.birth_date = form.birthDate
+      if (form.occupation.trim()) payload.occupation = form.occupation.trim()
       const { error: err } = await supabase.from('members').insert([payload])
       if (err) throw err
       setDone(true)
@@ -171,6 +173,38 @@ export default function MembershipPage() {
             className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
           <p className="text-xs text-slate-400 mt-1">Hangi takımı veya grubu temsil ettiğinizi yazın.</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+            Doğum Tarihi <span className="text-slate-400 font-normal">(isteğe bağlı)</span>
+          </label>
+          <div className="relative">
+            <FaCalendarAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+            <input
+              type="date"
+              value={form.birthDate}
+              onChange={e => setForm(f => ({ ...f, birthDate: e.target.value }))}
+              max={new Date().toISOString().split('T')[0]}
+              className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+            Meslek <span className="text-slate-400 font-normal">(isteğe bağlı)</span>
+          </label>
+          <div className="relative">
+            <FaBriefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+            <input
+              type="text"
+              value={form.occupation}
+              onChange={e => setForm(f => ({ ...f, occupation: e.target.value }))}
+              placeholder="Örn: Öğretmen, Mühendis, Esnaf…"
+              className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
         </div>
 
         <div>

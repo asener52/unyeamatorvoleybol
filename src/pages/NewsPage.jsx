@@ -68,7 +68,7 @@ function NewsDetail({ id }) {
         <span className="flex items-center gap-1"><FaCalendarAlt size={12} /> {formatDate(news.createdAt)}</span>
       </div>
       {news.imageUrl && (
-        <img src={news.imageUrl} alt={news.title} className="w-full h-64 md:h-96 object-cover rounded-2xl mb-8 shadow-lg" />
+        <img src={news.imageUrl} alt={news.title} className="w-full rounded-2xl mb-8 shadow-lg" />
       )}
       {news.content ? (
         <div className="prose-content text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: news.content }} />

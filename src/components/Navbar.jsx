@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { FaBars, FaTimes, FaVolleyballBall, FaUser, FaComments, FaSignOutAlt, FaSignInAlt, FaInstagram, FaFacebook, FaYoutube, FaTwitter, FaWhatsapp, FaTiktok } from 'react-icons/fa'
+import { FaBars, FaTimes, FaVolleyballBall, FaUser, FaComments, FaSignOutAlt, FaSignInAlt, FaUserPlus, FaInstagram, FaFacebook, FaYoutube, FaTwitter, FaWhatsapp, FaTiktok } from 'react-icons/fa'
 import { useSettings } from '../hooks/useSettings'
 import { useMember } from '../contexts/MemberAuthContext'
 import { useUnreadMessages } from '../hooks/useUnreadMessages'
@@ -148,11 +148,18 @@ export default function Navbar() {
             {member ? (
               <MemberDropdown member={member} onLogout={handleLogout} unread={unread} />
             ) : (
-              <Link to="/uye-giris"
-                className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors">
-                <FaSignInAlt size={13} />
-                <span className="hidden sm:inline">Üye Girişi</span>
-              </Link>
+              <div className="flex items-center gap-1.5">
+                <Link to="/uye-giris"
+                  className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors">
+                  <FaSignInAlt size={13} />
+                  <span className="hidden sm:inline">Üye Girişi</span>
+                </Link>
+                <Link to="/uye-ol"
+                  className="flex items-center gap-1.5 bg-gold-500 hover:bg-gold-400 text-primary-900 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors">
+                  <FaUserPlus size={13} />
+                  <span className="hidden sm:inline">Üye Ol</span>
+                </Link>
+              </div>
             )}
             <button className="lg:hidden p-2 rounded-md text-blue-200 hover:text-white hover:bg-primary-700"
               onClick={() => setOpen(!open)}>
@@ -189,9 +196,14 @@ export default function Navbar() {
               </button>
             </>
           ) : (
-            <Link to="/uye-giris" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm text-blue-100 hover:bg-primary-700 rounded-md">
-              <FaSignInAlt size={12} /> Üye Girişi
-            </Link>
+            <>
+              <Link to="/uye-giris" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm text-blue-100 hover:bg-primary-700 rounded-md">
+                <FaSignInAlt size={12} /> Üye Girişi
+              </Link>
+              <Link to="/uye-ol" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm text-gold-400 hover:bg-primary-700 rounded-md font-semibold">
+                <FaUserPlus size={12} /> Üye Ol
+              </Link>
+            </>
           )}
         </div>
       )}
