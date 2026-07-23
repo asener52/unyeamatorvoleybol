@@ -18,9 +18,13 @@ const WEEKDAYS = [
   { key: 0, label: 'Paz' },
 ]
 
+const WEEKDAY_NAMES = [
+  'Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi',
+]
+
 const APPLY_FILTER_OPTIONS = [
   { value: 'all',        label: 'Tüm etkinlikler' },
-  { value: 'weekday',    label: 'Aynı haftanın günü (örn: tüm Perşembeler)' },
+  { value: 'weekday',    label: 'Haftanın belirli bir günü' },
   { value: 'same_date',  label: 'Aynı tarih' },
   { value: 'date_range', label: 'Tarih aralığı' },
 ]
@@ -35,6 +39,7 @@ const EMPTY_FORM = {
   recurEnd: '',
   applyImageToAll: false,
   applyFilter: 'all',
+  applyWeekday: 1,
   applyRangeStart: '',
   applyRangeEnd: '',
 }
@@ -52,6 +57,12 @@ function buildTimeRange(start, end) {
 function formatDate(val) {
   if (!val) return ''
   try { return format(new Date(val), 'd MMM yyyy', { locale: tr }) } catch { return '' }
+}
+
+function getWeekday(date) {
+  if (!date) return null
+  const parsed = parseISO(String(date).slice(0, 10))
+  return Number.isNaN(parsed.getTime()) ? null : parsed.getDay()
 }
 
 /** Bir tarih aralığındaki belirli haftanın günlerine denk gelen tüm tarihleri döner */
@@ -95,6 +106,9 @@ export default function ManageEvents() {
       capacity: doc.capacity?.toString() || '',
       imageUrl: doc.imageUrl || '', published: doc.published ?? false,
       recurring: false, recurDays: [], recurStart: '', recurEnd: '',
+      applyImageToAll: false, applyFilter: 'all',
+      applyWeekday: getWeekday(doc.date) ?? 1,
+      applyRangeStart: '', applyRangeEnd: '',
     })
     setEditId(doc.id); setImgPreview(doc.imageUrl || ''); setImgFile(null)
     setPreviewDates([]); setShowForm(true)
@@ -152,12 +166,11 @@ export default function ManageEvents() {
         if (editId) {
           await updateDocument('events', editId, data)
           if (form.applyImageToAll && imageUrl) {
-            const editedDate = form.dateStr ? new Date(form.dateStr) : null
             const targets = docs.filter(d => {
               if (d.id === editId) return false
               if (form.applyFilter === 'all') return true
-              if (form.applyFilter === 'weekday' && editedDate) {
-                return d.date && new Date(d.date).getDay() === editedDate.getDay()
+              if (form.applyFilter === 'weekday') {
+                return getWeekday(d.date) === Number(form.applyWeekday)
               }
               if (form.applyFilter === 'same_date' && form.dateStr) {
                 return d.date && String(d.date).slice(0, 10) === form.dateStr
@@ -417,10 +430,20 @@ export default function ManageEvents() {
                             </div>
                           </div>
                         )}
-                        {form.applyFilter === 'weekday' && form.dateStr && (
-                          <p className="text-xs text-primary-600 font-medium">
-                            Tüm {['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'][new Date(form.dateStr).getDay()]} günkü etkinliklere uygulanacak
-                          </p>
+                        {form.applyFilter === 'weekday' && (
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-0.5">Gün seçin</label>
+                            <select value={form.applyWeekday}
+                              onChange={e => setForm(f => ({ ...f, applyWeekday: Number(e.target.value) }))}
+                              className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500">
+                              {WEEKDAY_NAMES.map((day, index) => (
+                                <option key={day} value={index}>Tüm {day} etkinlikleri</option>
+                              ))}
+                            </select>
+                            <p className="mt-1 text-xs text-primary-600 font-medium">
+                              Görsel tüm {WEEKDAY_NAMES[form.applyWeekday]} günkü etkinliklere uygulanacak.
+                            </p>
+                          </div>
                         )}
                         {form.applyFilter === 'same_date' && form.dateStr && (
                           <p className="text-xs text-primary-600 font-medium">
