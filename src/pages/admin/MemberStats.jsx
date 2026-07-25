@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useCollection } from '../../hooks/useFirestore'
+import { supabase } from '../../lib/supabase'
 import { FaVolleyballBall, FaUser, FaChevronDown, FaChevronRight, FaStar, FaShieldAlt, FaClock, FaTimes, FaMedal, FaSearch } from 'react-icons/fa'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
@@ -19,10 +20,17 @@ const STATUS_CONFIG = {
 
 export default function MemberStats() {
   const { docs: requests, loading } = useCollection('match_requests', 'created_at', 1000)
-  const { docs: members } = useCollection('members', 'name', 500)
   const [openMember, setOpenMember] = useState(null)
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState('total') // 'total' | 'asKadro' | 'name'
+  const [updatingStatus, setUpdatingStatus] = useState(null)
+
+  async function changeStatus(requestId, status) {
+    setUpdatingStatus(requestId)
+    const { error } = await supabase.from('match_requests').update({ status }).eq('id', requestId)
+    setUpdatingStatus(null)
+    if (error) alert('Durum güncellenemedi: ' + error.message)
+  }
 
   // Üye başına istatistik hesapla
   const stats = useMemo(() => {
@@ -52,6 +60,7 @@ export default function MemberStats() {
       else if (s === 'reddedildi')  map[id].reddedildi++
       else if (s === 'iptal')       map[id].iptal++
       map[id].matches.push({
+        id: r.id,
         eventTitle: r.event_title || 'Belirtilmemiş',
         eventDate: r.event_date || '',
         status: s,
@@ -214,17 +223,25 @@ export default function MemberStats() {
                       )}
                     </div>
                     <div className="space-y-1.5">
-                      {m.matches.map((match, i) => {
+                      {m.matches.map(match => {
                         const cfg = STATUS_CONFIG[match.status] || STATUS_CONFIG.bekliyor
                         return (
-                          <div key={i} className="flex items-center gap-3 py-1.5 border-b border-slate-50 last:border-0">
+                          <div key={match.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 py-2 border-b border-slate-50 last:border-0">
                             <div className="flex-1 min-w-0">
                               <span className="text-sm font-medium text-slate-700">{match.eventTitle}</span>
                             </div>
                             <span className="text-xs text-slate-400 shrink-0">{formatDate(match.eventDate)}</span>
-                            <span className={`flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-semibold shrink-0 ${cfg.cls}`}>
-                              {cfg.icon} {cfg.label}
-                            </span>
+                            <select value={match.status}
+                              onChange={e => changeStatus(match.id, e.target.value)}
+                              disabled={updatingStatus === match.id}
+                              aria-label={`${match.eventTitle} kadro durumu`}
+                              className={`text-xs px-2.5 py-1.5 rounded-lg border-0 font-semibold shrink-0 cursor-pointer disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-primary-500 ${cfg.cls}`}>
+                              <option value="bekliyor">Bekliyor</option>
+                              <option value="as_kadro">As Kadro</option>
+                              <option value="yedek_kadro">Yedek Kadro</option>
+                              <option value="reddedildi">Reddedildi</option>
+                              <option value="iptal">İptal</option>
+                            </select>
                           </div>
                         )
                       })}
