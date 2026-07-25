@@ -30,18 +30,29 @@ const TEAM_SLOTS = {
 }
 
 function preferredSlots(position = '') {
-  if (position.startsWith('Pasör Çaprazı')) return ['front_bottom', 'back_bottom', 'front_top']
-  if (position.startsWith('Pasör')) return ['back_bottom', 'front_bottom', 'back_middle']
-  if (position.startsWith('Smaçör')) return ['front_top', 'back_top', 'front_bottom']
-  if (position.startsWith('Orta')) return ['front_middle', 'front_top', 'front_bottom']
+  if (position.startsWith('Pasör Çaprazı')) return ['back_top', 'back_bottom']
+  if (position.startsWith('Pasör')) return ['front_middle']
+  if (position.startsWith('Smaçör')) return ['front_top', 'front_bottom']
+  if (position.startsWith('Orta')) return ['back_middle']
   if (position.startsWith('Libero')) return ['back_middle', 'back_top', 'back_bottom']
   if (position.startsWith('Defans')) return ['back_middle', 'back_top', 'back_bottom']
-  return ['back_top', 'back_middle', 'front_top', 'front_middle', 'back_bottom', 'front_bottom']
+  return ['back_top', 'back_middle', 'back_bottom', 'front_top', 'front_middle', 'front_bottom']
+}
+
+function placementPriority(position = '') {
+  if (position.startsWith('Pasör Çaprazı')) return 1
+  if (position.startsWith('Pasör')) return 1
+  if (position.startsWith('Smaçör')) return 1
+  if (position.startsWith('Orta')) return 1
+  return 2
 }
 
 function positionPlayers(players, team) {
   const available = [...TEAM_SLOTS[team]]
-  return players.map((player, index) => {
+  return players
+    .map((player, index) => ({ player, number: index + 1 }))
+    .sort((a, b) => placementPriority(a.player.position) - placementPriority(b.player.position))
+    .map(({ player, number }) => {
     const preferences = preferredSlots(player.position)
     let preferredIndex = -1
     for (const preference of preferences) {
@@ -50,7 +61,7 @@ function positionPlayers(players, team) {
     }
     const slotIndex = preferredIndex >= 0 ? preferredIndex : 0
     const slot = available.splice(slotIndex, 1)[0]
-    return { player, number: index + 1, slot }
+    return { player, number, slot }
   }).filter(item => item.slot)
 }
 
