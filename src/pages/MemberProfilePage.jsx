@@ -7,8 +7,9 @@ import {
   FaVolleyballBall, FaPhone, FaEnvelope, FaSignOutAlt, FaComments,
   FaUser, FaEdit, FaCheck, FaTimes, FaLock, FaEye, FaEyeSlash,
   FaCamera, FaCalendarAlt, FaClock, FaTimesCircle, FaStar, FaShieldAlt,
+  FaBriefcase, FaBirthdayCake,
 } from 'react-icons/fa'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { tr } from 'date-fns/locale'
 
 const POSITIONS = [
@@ -36,6 +37,11 @@ const STATUS_CONFIG = {
 function formatEventDate(d) {
   if (!d) return ''
   try { return format(new Date(d), 'd MMMM yyyy', { locale: tr }) } catch { return d }
+}
+
+function formatBirthDate(d) {
+  if (!d) return ''
+  try { return format(parseISO(String(d).slice(0, 10)), 'd MMMM yyyy', { locale: tr }) } catch { return d }
 }
 
 function PasswordInput({ label, value, onChange, placeholder }) {
@@ -73,7 +79,9 @@ export default function MemberProfilePage() {
 
   const [editing, setEditing] = useState(false)
   const [tab, setTab] = useState('info')
-  const [form, setForm] = useState({ name: '', phone: '', email: '', position: '', team: '' })
+  const [form, setForm] = useState({
+    name: '', phone: '', email: '', position: '', team: '', birthDate: '', occupation: '',
+  })
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
   const [saving, setSaving] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -130,7 +138,15 @@ export default function MemberProfilePage() {
   }
 
   function openEdit() {
-    setForm({ name: member.name || '', phone: member.phone || '', email: member.email || '', position: member.position || POSITIONS[0], team: member.team || '' })
+    setForm({
+      name: member.name || '',
+      phone: member.phone || '',
+      email: member.email || '',
+      position: member.position || POSITIONS[0],
+      team: member.team || '',
+      birthDate: member.birth_date ? String(member.birth_date).slice(0, 10) : '',
+      occupation: member.occupation || '',
+    })
     setPwForm({ current: '', next: '', confirm: '' })
     setError(''); setSuccess(''); setTab('info'); setEditing(true)
   }
@@ -145,14 +161,17 @@ export default function MemberProfilePage() {
         const { data: existing } = await supabase.from('members').select('id').eq('phone', newPhone).limit(1)
         if (existing?.length > 0) { setError('Bu telefon numarası başka bir üyeye ait.'); setSaving(false); return }
       }
-      const { error: err } = await supabase.from('members').update({
+      const profileUpdate = {
         name: form.name.trim(), phone: newPhone,
         email: form.email.trim() || null,
         position: form.position,
         team: form.team?.trim() || null,
-      }).eq('id', member.id)
+        birth_date: form.birthDate || null,
+        occupation: form.occupation.trim() || null,
+      }
+      const { error: err } = await supabase.from('members').update(profileUpdate).eq('id', member.id)
       if (err) throw err
-      updateSession({ name: form.name.trim(), phone: newPhone, email: form.email.trim() || null, position: form.position, team: form.team?.trim() || null })
+      updateSession(profileUpdate)
       setEditing(false)
     } catch (err) {
       setError('Hata: ' + err.message)
@@ -230,6 +249,27 @@ export default function MemberProfilePage() {
             <FaEnvelope className="text-primary-500 shrink-0" size={15} />
             <div><div className="text-xs text-slate-400">E-posta</div>
               <div className="font-semibold text-slate-800">{member.email}</div></div>
+          </div>
+        )}
+        {member.birth_date && (
+          <div className="flex items-center gap-3 px-5 py-4">
+            <FaBirthdayCake className="text-primary-500 shrink-0" size={15} />
+            <div><div className="text-xs text-slate-400">Doğum Tarihi</div>
+              <div className="font-semibold text-slate-800">{formatBirthDate(member.birth_date)}</div></div>
+          </div>
+        )}
+        {member.occupation && (
+          <div className="flex items-center gap-3 px-5 py-4">
+            <FaBriefcase className="text-primary-500 shrink-0" size={15} />
+            <div><div className="text-xs text-slate-400">Meslek</div>
+              <div className="font-semibold text-slate-800">{member.occupation}</div></div>
+          </div>
+        )}
+        {member.team && (
+          <div className="flex items-center gap-3 px-5 py-4">
+            <FaVolleyballBall className="text-gold-500 shrink-0" size={15} />
+            <div><div className="text-xs text-slate-400">Takım</div>
+              <div className="font-semibold text-slate-800">{member.team}</div></div>
           </div>
         )}
         <div className="flex items-center gap-3 px-5 py-4">
@@ -395,6 +435,21 @@ export default function MemberProfilePage() {
                     <label className="block text-xs text-slate-500 mb-1">E-posta</label>
                     <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                       placeholder="ornek@email.com"
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">Doğum Tarihi <span className="text-slate-300">(isteğe bağlı)</span></label>
+                    <input type="date" value={form.birthDate}
+                      onChange={e => setForm(f => ({ ...f, birthDate: e.target.value }))}
+                      max={new Date().toISOString().slice(0, 10)}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">Meslek <span className="text-slate-300">(isteğe bağlı)</span></label>
+                    <input value={form.occupation}
+                      onChange={e => setForm(f => ({ ...f, occupation: e.target.value }))}
+                      placeholder="Örn: Öğretmen, Mühendis, Esnaf…"
+                      maxLength={100}
                       className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
                   </div>
                   <div>

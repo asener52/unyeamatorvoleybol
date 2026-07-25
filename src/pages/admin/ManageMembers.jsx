@@ -48,6 +48,9 @@ function EditModal({ member, onClose }) {
     name: member.name || '',
     phone: member.phone || '',
     email: member.email || '',
+    team: member.team || '',
+    birthDate: member.birth_date ? String(member.birth_date).slice(0, 10) : '',
+    occupation: member.occupation || '',
     position: member.position || '',
     role: member.role || 'uye',
     status: member.status || 'bekliyor',
@@ -65,6 +68,9 @@ function EditModal({ member, onClose }) {
         name: form.name.trim(),
         phone: form.phone.trim(),
         email: form.email.trim() || null,
+        team: form.team.trim() || null,
+        birth_date: form.birthDate || null,
+        occupation: form.occupation.trim() || null,
         position: form.position,
         role: form.role,
         status: form.status,
@@ -120,6 +126,17 @@ function EditModal({ member, onClose }) {
                 <input required value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className={inp} /></div>
               <div><label className="text-xs text-slate-500 mb-1 block">E-posta</label>
                 <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inp} /></div>
+              <div><label className="text-xs text-slate-500 mb-1 block">Takım</label>
+                <input value={form.team} onChange={e => setForm(f => ({ ...f, team: e.target.value }))} className={inp} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-xs text-slate-500 mb-1 block">Doğum Tarihi</label>
+                  <input type="date" value={form.birthDate}
+                    onChange={e => setForm(f => ({ ...f, birthDate: e.target.value }))}
+                    max={new Date().toISOString().slice(0, 10)} className={inp} /></div>
+                <div><label className="text-xs text-slate-500 mb-1 block">Meslek</label>
+                  <input value={form.occupation} onChange={e => setForm(f => ({ ...f, occupation: e.target.value }))}
+                    maxLength={100} className={inp} /></div>
+              </div>
               <div><label className="text-xs text-slate-500 mb-1 block">Pozisyon</label>
                 <select value={form.position} onChange={e => setForm(f => ({ ...f, position: e.target.value }))} className={inp}>
                   {POSITIONS.map(p => <option key={p}>{p}</option>)}
