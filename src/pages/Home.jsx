@@ -4,9 +4,37 @@ import NewsCard from '../components/NewsCard'
 import EventCard from '../components/EventCard'
 import PollCard from '../components/PollCard'
 import SectionHeader from '../components/SectionHeader'
-import { usePublishedCollection, useStaticCollection } from '../hooks/useFirestore'
+import { useStaticCollection } from '../hooks/useFirestore'
 import { useSettings } from '../hooks/useSettings'
-import { FaArrowRight, FaVolleyballBall } from 'react-icons/fa'
+import { FaArrowRight, FaInstagram, FaVolleyballBall, FaWhatsapp, FaYoutube } from 'react-icons/fa'
+
+const CTA_SOCIALS = [
+  {
+    key: 'instagram',
+    label: 'Instagram',
+    Icon: FaInstagram,
+    className: 'bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:opacity-90 text-white',
+    href: value => /^https?:\/\//i.test(value)
+      ? value
+      : `https://instagram.com/${value.replace(/^@/, '')}`,
+  },
+  {
+    key: 'youtube',
+    label: 'YouTube',
+    Icon: FaYoutube,
+    className: 'bg-red-600 hover:bg-red-700 text-white',
+    href: value => /^https?:\/\//i.test(value)
+      ? value
+      : `https://youtube.com/${value.replace(/^@?/, '@')}`,
+  },
+  {
+    key: 'whatsapp',
+    label: 'WhatsApp',
+    Icon: FaWhatsapp,
+    className: 'bg-green-500 hover:bg-green-600 text-white',
+    href: value => `https://wa.me/${value.replace(/\D/g, '')}`,
+  },
+]
 
 export default function Home() {
   const { docs: news, loading: newsLoading } = useStaticCollection('news', 4)
@@ -17,6 +45,7 @@ export default function Home() {
   const featuredNews = news[0]
   const sideNews = news.slice(1, 4)
   const poll = polls[0] || null
+  const ctaSocials = CTA_SOCIALS.filter(item => settings?.social?.[item.key])
 
   // Bu hafta + önümüzdeki hafta, bugünden itibaren (max 4)
   const todayStr = new Date().toISOString().slice(0, 10)
@@ -131,11 +160,17 @@ export default function Home() {
             <FaVolleyballBall className="text-gold-400 text-5xl mx-auto mb-4" />
             <h2 className="text-2xl md:text-3xl font-extrabold mb-3">{settings.ctaTitle || 'Topluluğumuza Katılın!'}</h2>
             <p className="text-blue-200 mb-6 max-w-lg mx-auto">{settings.ctaText}</p>
-            {settings.ctaEmail && (
-              <a href={`mailto:${settings.ctaEmail}`}
-                className="inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-600 text-primary-900 font-bold px-6 py-3 rounded-full transition-colors">
-                Bilgi Al <FaArrowRight />
-              </a>
+            {ctaSocials.length > 0 && (
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                {ctaSocials.map(({ key, label, Icon, className, href }) => (
+                  <a key={key} href={href(settings.social[key])}
+                    target="_blank" rel="noreferrer"
+                    aria-label={`${label} sayfamızı aç`}
+                    className={`inline-flex items-center gap-2 font-bold px-5 py-3 rounded-full shadow-sm transition-all hover:-translate-y-0.5 ${className}`}>
+                    <Icon size={19} /> {label}
+                  </a>
+                ))}
+              </div>
             )}
           </section>
         )}
