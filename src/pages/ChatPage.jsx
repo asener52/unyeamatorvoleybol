@@ -1,11 +1,23 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { uploadFile } from '../lib/supabase'
 import { useMember } from '../contexts/MemberAuthContext'
 import { markConversationRead, useUnreadMessages } from '../hooks/useUnreadMessages'
-import { FaPaperPlane, FaUsers, FaUser, FaComments, FaSignInAlt } from 'react-icons/fa'
+import { FaPaperPlane, FaUsers, FaComments, FaSignInAlt, FaImage, FaDownload, FaTimes } from 'react-icons/fa'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
+
+const IMAGE_MESSAGE_PREFIX = '__IMAGE_MESSAGE__:'
+
+function parseMessageContent(content) {
+  if (!content?.startsWith(IMAGE_MESSAGE_PREFIX)) return { text: content || '' }
+  try {
+    return { image: JSON.parse(content.slice(IMAGE_MESSAGE_PREFIX.length)) }
+  } catch {
+    return { text: content }
+  }
+}
 
 function formatTime(ts) {
   if (!ts) return ''
@@ -34,9 +46,12 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  const [imageFile, setImageFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState('')
   const [activeDM, setActiveDM] = useState(null) // null = grup sohbeti
   const [showSidebar, setShowSidebar] = useState(false)
   const bottomRef = useRef(null)
+  const imageInputRef = useRef(null)
   const { byConversation = {} } = useUnreadMessages(member?.id)
 
   // Onaylı üyeleri yükle
@@ -87,18 +102,71 @@ export default function ChatPage() {
 
   async function sendMessage(e) {
     e.preventDefault()
-    if (!input.trim() || !member) return
+    if ((!input.trim() && !imageFile) || !member) return
     setSending(true)
+    let content = input.trim()
+    if (imageFile) {
+      try {
+        const url = await uploadFile('gallery', `message_${member.id}_${imageFile.name}`, imageFile)
+        content = IMAGE_MESSAGE_PREFIX + JSON.stringify({
+          url, name: imageFile.name, caption: input.trim(),
+        })
+      } catch (error) {
+        alert('Görsel yüklenemedi: ' + error.message)
+        setSending(false)
+        return
+      }
+    }
     const msg = {
       sender_id: member.id,
       sender_name: member.name,
       receiver_id: activeDM?.id ?? null,
-      content: input.trim(),
+      content,
     }
     const { error } = await supabase.from('messages').insert([msg])
-    if (!error) setInput('')
+    if (!error) {
+      setInput('')
+      setImageFile(null)
+      if (imagePreview) URL.revokeObjectURL(imagePreview)
+      setImagePreview('')
+    }
     else alert('Mesaj gönderilemedi: ' + error.message)
     setSending(false)
+  }
+
+  function handleImageChange(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/')) { alert('Lütfen bir görsel dosyası seçin.'); return }
+    if (file.size > 10 * 1024 * 1024) { alert('Görsel boyutu 10 MB’dan büyük olamaz.'); return }
+    if (imagePreview) URL.revokeObjectURL(imagePreview)
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
+
+  function removeSelectedImage() {
+    if (imagePreview) URL.revokeObjectURL(imagePreview)
+    setImageFile(null)
+    setImagePreview('')
+  }
+
+  async function downloadImage(image) {
+    try {
+      const response = await fetch(image.url)
+      if (!response.ok) throw new Error('Dosya alınamadı')
+      const blob = await response.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = objectUrl
+      link.download = image.name || 'mesaj-gorseli'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(objectUrl)
+    } catch {
+      window.open(image.url, '_blank', 'noopener,noreferrer')
+    }
   }
 
   if (!member) {
@@ -195,6 +263,7 @@ export default function ChatPage() {
             )}
             {messages.map((msg, i) => {
               const isMe = msg.sender_id === member.id
+              const parsedContent = parseMessageContent(msg.content)
               const prevMsg = messages[i - 1]
               const showSender = !prevMsg || prevMsg.sender_id !== msg.sender_id
 
@@ -206,12 +275,32 @@ export default function ChatPage() {
                     {!isMe && showSender && (
                       <span className="text-xs text-slate-500 font-semibold mb-1 ml-1">{msg.sender_name}</span>
                     )}
-                    <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                    <div className={`rounded-2xl text-sm leading-relaxed overflow-hidden ${
                       isMe
                         ? 'bg-primary-600 text-white rounded-br-sm'
                         : 'bg-slate-100 text-slate-800 rounded-bl-sm'
                     }`}>
-                      {msg.content}
+                      {parsedContent.image ? (
+                        <div className="w-56 sm:w-72">
+                          <a href={parsedContent.image.url} target="_blank" rel="noreferrer">
+                            <img src={parsedContent.image.url} alt={parsedContent.image.name || 'Mesaj görseli'}
+                              className="w-full max-h-72 object-cover bg-slate-200" />
+                          </a>
+                          <div className="px-3 py-2">
+                            {parsedContent.image.caption && (
+                              <p className="mb-2 break-words">{parsedContent.image.caption}</p>
+                            )}
+                            <button type="button" onClick={() => downloadImage(parsedContent.image)}
+                              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg ${
+                                isMe ? 'bg-white/15 hover:bg-white/25 text-white' : 'bg-white hover:bg-slate-200 text-primary-700'
+                              }`}>
+                              <FaDownload size={11} /> İndir
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="px-4 py-2.5 whitespace-pre-wrap break-words">{parsedContent.text}</div>
+                      )}
                     </div>
                     <span className="text-xs text-slate-400 mt-1 mx-1">{formatTime(msg.created_at)}</span>
                   </div>
@@ -222,19 +311,37 @@ export default function ChatPage() {
           </div>
 
           {/* Mesaj gönder */}
-          <form onSubmit={sendMessage} className="p-4 border-t border-slate-100 flex gap-3 shrink-0">
-            <input
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              placeholder={activeDM ? `${activeDM.name}'e mesaj yaz...` : 'Topluluğa mesaj yaz...'}
-              className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              autoComplete="off"
-            />
-            <button type="submit" disabled={sending || !input.trim()}
-              className="bg-primary-700 hover:bg-primary-800 disabled:opacity-50 text-white px-4 py-2.5 rounded-xl transition-colors flex items-center gap-2 text-sm font-semibold shrink-0">
-              <FaPaperPlane size={13} />
-              <span className="hidden sm:inline">Gönder</span>
-            </button>
+          <form onSubmit={sendMessage} className="p-4 border-t border-slate-100 shrink-0">
+            {imagePreview && (
+              <div className="relative inline-block mb-3">
+                <img src={imagePreview} alt="Gönderilecek görsel" className="h-20 w-28 object-cover rounded-lg border border-slate-200" />
+                <button type="button" onClick={removeSelectedImage}
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow">
+                  <FaTimes size={10} />
+                </button>
+                <div className="text-[10px] text-slate-500 mt-1 max-w-28 truncate">{imageFile?.name}</div>
+              </div>
+            )}
+            <div className="flex gap-2 sm:gap-3">
+              <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+              <button type="button" onClick={() => imageInputRef.current?.click()} disabled={sending}
+                title="Görsel ekle"
+                className="border border-slate-300 hover:bg-slate-100 disabled:opacity-50 text-slate-600 px-3 py-2.5 rounded-xl transition-colors shrink-0">
+                <FaImage size={17} />
+              </button>
+              <input
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                placeholder={imageFile ? 'Görsele açıklama ekleyin…' : activeDM ? `${activeDM.name}'e mesaj yaz...` : 'Topluluğa mesaj yaz...'}
+                className="flex-1 min-w-0 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                autoComplete="off"
+              />
+              <button type="submit" disabled={sending || (!input.trim() && !imageFile)}
+                className="bg-primary-700 hover:bg-primary-800 disabled:opacity-50 text-white px-4 py-2.5 rounded-xl transition-colors flex items-center gap-2 text-sm font-semibold shrink-0">
+                <FaPaperPlane size={13} />
+                <span className="hidden sm:inline">{sending ? 'Gönderiliyor' : 'Gönder'}</span>
+              </button>
+            </div>
           </form>
         </div>
       </div>

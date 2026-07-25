@@ -63,6 +63,7 @@ export default function ManageGallery() {
   const [selectedIds, setSelectedIds] = useState([])
   const [bulkUploading, setBulkUploading] = useState(false)
   const [bulkProgress, setBulkProgress] = useState('')
+  const [bulkPublished, setBulkPublished] = useState(true)
   const bulkInputRef = useRef(null)
 
   // Sürükle-bırak sıralama
@@ -159,7 +160,7 @@ export default function ManageGallery() {
           const url = await uploadFile('gallery', file.name, file)
           const titleFromFile = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ')
           await addDocument('gallery', {
-            title: titleFromFile, url, type: 'image', published: true, order: nextOrder++,
+            title: titleFromFile, url, type: 'image', published: bulkPublished, order: nextOrder++,
           })
           uploadedCount += 1
         } catch (err) {
@@ -218,6 +219,13 @@ export default function ManageGallery() {
               <FaTrash size={13} /> Seçilenleri Sil ({selectedIds.length})
             </button>
           )}
+          <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 bg-white cursor-pointer">
+            <input type="checkbox" checked={bulkPublished}
+              onChange={e => setBulkPublished(e.target.checked)}
+              disabled={bulkUploading}
+              className="w-4 h-4 rounded text-green-600" />
+            <span className="text-sm font-medium text-slate-600 whitespace-nowrap">Yüklenenleri yayınla</span>
+          </label>
           <button onClick={() => bulkInputRef.current?.click()} disabled={bulkUploading}
             className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg font-medium text-sm">
             <FaImages size={14} /> {bulkUploading ? `Yükleniyor ${bulkProgress}` : 'Toplu Görsel Ekle'}
