@@ -11,8 +11,16 @@ export default function PublicMemberStats() {
 
   useEffect(() => {
     if (!enabled) return
-    supabase.from('public_member_stats').select('*').order('attendance_rate', { ascending: false })
-      .then(({ data }) => { setMembers(data || []); setLoading(false) })
+    supabase.from('public_member_stats').select('*')
+      .order('attendance_rate', { ascending: false })
+      .then(({ data }) => {
+        const sorted = [...(data || [])].sort((a, b) =>
+          b.attendance_rate - a.attendance_rate ||
+          (b.as_kadro + b.yedek_kadro) - (a.as_kadro + a.yedek_kadro)
+        )
+        setMembers(sorted)
+        setLoading(false)
+      })
   }, [enabled])
 
   if (!enabled) return null

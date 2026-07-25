@@ -27,7 +27,10 @@ export default function Reports() {
       waiting,
       rate: eligible ? Math.round(((asKadro + reserve) / eligible) * 100) : 0,
     }
-  }).sort((a, b) => b.rate - a.rate || b.total - a.total), [members, requests])
+  }).sort((a, b) =>
+    b.rate - a.rate ||
+    (b.asKadro + b.reserve) - (a.asKadro + a.reserve)
+  ), [members, requests])
 
   async function toggleTableShare() {
     const nextValue = !isShared
