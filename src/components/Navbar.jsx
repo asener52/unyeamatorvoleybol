@@ -12,6 +12,7 @@ const navLinks = [
   { to: '/turnuvalar', label: 'Turnuvalar' },
   { to: '/galeri', label: 'Galeri' },
   { to: '/anketler', label: 'Anketler' },
+  { to: '/mac-kadrosu', label: 'Maç Kadrosu' },
   { to: '/hakkimizda', label: 'Hakkımızda' },
   { to: '/mac-kayit', label: 'Maça Katıl', highlight: true },
 ]

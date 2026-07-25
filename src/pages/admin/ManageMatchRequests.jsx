@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useCollection } from '../../hooks/useFirestore'
 import { FaTrash, FaVolleyballBall, FaPhone, FaUser, FaTimes, FaClock, FaSort, FaSortUp, FaSortDown, FaChartBar, FaCalendarAlt, FaStar, FaShieldAlt, FaChevronDown, FaChevronRight } from 'react-icons/fa'
@@ -140,6 +141,7 @@ export default function ManageMatchRequests() {
     docs.filter(d => (d.event_date || '') >= today).forEach(d => {
       const key = d.event_id || '__no_event__'
       if (!map[key]) map[key] = {
+        eventId: String(key),
         title: d.event_title || 'Belirtilmemiş',
         date: d.event_date || '',
         as_kadro: [],
@@ -243,6 +245,14 @@ export default function ManageMatchRequests() {
                 {/* Accordion içerik */}
                 {isOpen && (
                   <div className="px-5 pb-5 border-t border-slate-100">
+                    {m.eventId !== '__no_event__' && m.as_kadro.length > 0 && (
+                      <div className="flex justify-end pt-4">
+                        <Link to={`/admin/mac-kadrosu?event=${encodeURIComponent(m.eventId)}`}
+                          className="inline-flex items-center gap-2 bg-primary-700 hover:bg-primary-800 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                          <FaVolleyballBall size={13} /> Maç Kadrosu Oluştur / Yayınla
+                        </Link>
+                      </div>
+                    )}
                     <RosterSection
                       title="As Kadro"
                       players={m.as_kadro}

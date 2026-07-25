@@ -35,6 +35,8 @@ import ManagePopup from './pages/admin/ManagePopup'
 import MatchRequestPage from './pages/MatchRequestPage'
 import MembershipPage from './pages/MembershipPage'
 import TournamentPage from './pages/TournamentPage'
+import MatchRostersPage from './pages/MatchRostersPage'
+import ManageMatchRosters from './pages/admin/ManageMatchRosters'
 
 function PublicLayout({ children }) {
   return (
@@ -59,6 +61,7 @@ function AdminPages() {
           <Route path="anketler" element={<ManagePolls />} />
           <Route path="ayarlar" element={<ManageSettings />} />
           <Route path="mac-talepleri" element={<ManageMatchRequests />} />
+          <Route path="mac-kadrosu" element={<ManageMatchRosters />} />
           <Route path="uye-istatistikleri" element={<MemberStats />} />
           <Route path="uyeler" element={<ManageMembers />} />
           <Route path="turnuvalar" element={<ManageTournaments />} />
@@ -89,6 +92,7 @@ export default function App() {
               <Route path="/anketler" element={<PublicLayout><PollsPage /></PublicLayout>} />
               <Route path="/hakkimizda" element={<PublicLayout><AboutPage /></PublicLayout>} />
               <Route path="/mac-kayit" element={<PublicLayout><MatchRequestPage /></PublicLayout>} />
+              <Route path="/mac-kadrosu" element={<PublicLayout><MatchRostersPage /></PublicLayout>} />
               <Route path="/uye-ol" element={<PublicLayout><MembershipPage /></PublicLayout>} />
               <Route path="/uye-giris" element={<PublicLayout><MemberLoginPage /></PublicLayout>} />
               <Route path="/profil" element={<PublicLayout><MemberProfilePage /></PublicLayout>} />

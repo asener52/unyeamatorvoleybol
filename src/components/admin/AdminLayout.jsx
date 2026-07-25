@@ -17,6 +17,7 @@ const menuItems = [
   { to: '/admin/anketler', icon: FaPoll, label: 'Anketler' },
   { to: '/admin/uyeler', icon: FaUsers, label: 'Üye Yönetimi' },
   { to: '/admin/mac-talepleri', icon: FaClipboardList, label: 'Maç Talepleri' },
+  { to: '/admin/mac-kadrosu', icon: FaVolleyballBall, label: 'Maç Kadrosu' },
   { to: '/admin/uye-istatistikleri', icon: FaMedal, label: 'Üye İstatistikleri' },
   { to: '/admin/mesajlar', icon: FaComments, label: 'Mesajlar' },
   { to: '/admin/yoneticiler', icon: FaUserShield, label: 'Yöneticiler' },
