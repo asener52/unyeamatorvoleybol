@@ -38,6 +38,7 @@ import TournamentPage from './pages/TournamentPage'
 import MatchRostersPage from './pages/MatchRostersPage'
 import ManageMatchRosters from './pages/admin/ManageMatchRosters'
 import Reports from './pages/admin/Reports'
+import PublicMemberStatsPage from './pages/PublicMemberStatsPage'
 
 function PublicLayout({ children }) {
   return (
@@ -95,6 +96,7 @@ export default function App() {
               <Route path="/hakkimizda" element={<PublicLayout><AboutPage /></PublicLayout>} />
               <Route path="/mac-kayit" element={<PublicLayout><MatchRequestPage /></PublicLayout>} />
               <Route path="/mac-kadrosu" element={<PublicLayout><MatchRostersPage /></PublicLayout>} />
+              <Route path="/uye-istatistikleri" element={<PublicLayout><PublicMemberStatsPage /></PublicLayout>} />
               <Route path="/uye-ol" element={<PublicLayout><MembershipPage /></PublicLayout>} />
               <Route path="/uye-giris" element={<PublicLayout><MemberLoginPage /></PublicLayout>} />
               <Route path="/profil" element={<PublicLayout><MemberProfilePage /></PublicLayout>} />

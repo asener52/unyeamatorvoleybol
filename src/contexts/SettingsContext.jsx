@@ -34,7 +34,7 @@ export function SettingsProvider({ children }) {
   }, [settings])
 
   return (
-    <SettingsContext.Provider value={{ settings, loading }}>
+    <SettingsContext.Provider value={{ settings, loading, updateSettings: setSettings }}>
       {children}
     </SettingsContext.Provider>
   )

@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react'
 import { useCollection } from '../../hooks/useFirestore'
-import { supabase } from '../../lib/supabase'
-import { FaChartBar, FaShareAlt, FaStar, FaShieldAlt, FaClock } from 'react-icons/fa'
+import { saveSettings, useSettings } from '../../hooks/useSettings'
+import { FaChartBar, FaShareAlt, FaStar, FaShieldAlt, FaClock, FaEyeSlash } from 'react-icons/fa'
 
 export default function Reports() {
   const { docs: requests, loading } = useCollection('match_requests', 'created_at', 1000)
   const { docs: members } = useCollection('members', 'name', 500)
-  const [updating, setUpdating] = useState(null)
-  const [shareOverrides, setShareOverrides] = useState({})
-  const isShared = member => shareOverrides[member.id] ?? member.stats_published ?? false
+  const { settings, updateSettings } = useSettings()
+  const [savingShare, setSavingShare] = useState(false)
+  const [shareOverride, setShareOverride] = useState(null)
+  const isShared = shareOverride ?? settings?.publicMemberStatsEnabled ?? false
 
   const rows = useMemo(() => members.map(member => {
     const memberRequests = requests.filter(request => request.member_id === member.id)
@@ -18,45 +19,65 @@ export default function Reports() {
     const rejected = memberRequests.filter(request => request.status === 'reddedildi').length
     const eligible = asKadro + reserve + waiting + rejected
     return {
-      ...member,
+      id: member.id,
+      name: member.name,
       total: memberRequests.length,
       asKadro,
       reserve,
       waiting,
       rate: eligible ? Math.round(((asKadro + reserve) / eligible) * 100) : 0,
     }
-  }).sort((a, b) => b.total - a.total), [members, requests])
+  }).sort((a, b) => b.rate - a.rate || b.total - a.total), [members, requests])
 
-  async function toggleShare(member) {
-    const nextValue = !isShared(member)
-    setUpdating(member.id)
-    const { error } = await supabase.from('members')
-      .update({ stats_published: nextValue })
-      .eq('id', member.id)
-    setUpdating(null)
-    if (error) alert('Paylaşım ayarı güncellenemedi: ' + error.message)
-    else setShareOverrides(current => ({ ...current, [member.id]: nextValue }))
+  async function toggleTableShare() {
+    const nextValue = !isShared
+    setSavingShare(true)
+    try {
+      const nextSettings = { ...(settings || {}), publicMemberStatsEnabled: nextValue }
+      await saveSettings(nextSettings)
+      updateSettings(nextSettings)
+      setShareOverride(nextValue)
+    } catch (error) {
+      alert('Tablo paylaşım ayarı güncellenemedi: ' + error.message)
+    } finally {
+      setSavingShare(false)
+    }
   }
 
-  const totals = {
-    members: rows.length,
-    requests: requests.length,
-    shared: members.filter(member => isShared(member)).length,
-    rate: rows.length ? Math.round(rows.reduce((sum, row) => sum + row.rate, 0) / rows.length) : 0,
-  }
+  const averageRate = rows.length
+    ? Math.round(rows.reduce((sum, row) => sum + row.rate, 0) / rows.length)
+    : 0
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold text-slate-800 flex items-center gap-2"><FaChartBar /> Raporlar</h1>
-        <p className="text-sm text-slate-500">Üye performansları ve halka açık paylaşım ayarları</p>
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-800 flex items-center gap-2"><FaChartBar /> Raporlar</h1>
+          <p className="text-sm text-slate-500">Üye performans tablosu ve public paylaşım ayarı</p>
+        </div>
+        <button onClick={toggleTableShare} disabled={savingShare}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors disabled:opacity-50 ${
+            isShared ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100' : 'bg-green-600 text-white hover:bg-green-700'
+          }`}>
+          {isShared ? <FaEyeSlash /> : <FaShareAlt />}
+          {savingShare ? 'Kaydediliyor…' : isShared ? 'Tabloyu Yayından Kaldır' : 'Tabloyu Public Alanda Paylaş'}
+        </button>
       </div>
+
+      <div className={`mb-6 rounded-xl border px-4 py-3 text-sm font-semibold ${
+        isShared ? 'bg-green-50 border-green-200 text-green-700' : 'bg-slate-50 border-slate-200 text-slate-600'
+      }`}>
+        {isShared
+          ? 'Üye istatistikleri tablosu public arayüzde yayınlanıyor.'
+          : 'Üye istatistikleri yalnızca yönetici panelinde görülebilir.'}
+      </div>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          ['Toplam Üye', totals.members, 'text-primary-700'],
-          ['Toplam Başvuru', totals.requests, 'text-slate-700'],
-          ['Paylaşılan Üye', totals.shared, 'text-green-600'],
-          ['Ortalama Performans', `%${totals.rate}`, 'text-purple-600'],
+          ['Toplam Üye', rows.length, 'text-primary-700'],
+          ['Toplam Başvuru', requests.length, 'text-slate-700'],
+          ['As Kadro', rows.reduce((sum, row) => sum + row.asKadro, 0), 'text-green-600'],
+          ['Ortalama Performans', `%${averageRate}`, 'text-purple-600'],
         ].map(([label, value, color]) => (
           <div key={label} className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm text-center">
             <div className={`text-2xl font-extrabold ${color}`}>{value}</div>
@@ -64,42 +85,45 @@ export default function Reports() {
           </div>
         ))}
       </div>
-      {loading ? <div className="h-52 bg-slate-200 animate-pulse rounded-2xl" /> : (
-        <div className="space-y-3">
-          {rows.map(member => (
-            <article key={member.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-              <div className="flex flex-wrap items-center gap-3 mb-3">
-                <div className="flex-1 min-w-48">
-                  <h2 className="font-bold text-slate-800">{member.name}</h2>
-                  <div className="text-xs text-slate-400">{member.total} maç başvurusu</div>
-                </div>
-                <button onClick={() => toggleShare(member)} disabled={updating === member.id}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 ${
-                    isShared(member)
-                      ? 'bg-green-600 text-white hover:bg-green-700'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}>
-                  <FaShareAlt /> {isShared(member) ? 'Paylaşılıyor' : 'Paylaş'}
-                </button>
-              </div>
-              <div className="grid sm:grid-cols-[1fr_auto] gap-4 items-center">
-                <div>
-                  <div className="flex justify-between text-xs font-semibold text-slate-500 mb-1">
-                    <span>Performans</span><span>%{member.rate}</span>
-                  </div>
-                  <div className="h-4 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-primary-500 to-green-500 rounded-full transition-all"
-                      style={{ width: `${member.rate}%` }} />
-                  </div>
-                </div>
-                <div className="flex gap-2 text-xs font-semibold">
-                  <span className="flex items-center gap-1 bg-green-50 text-green-700 px-2.5 py-1.5 rounded-lg"><FaStar /> {member.asKadro} As</span>
-                  <span className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2.5 py-1.5 rounded-lg"><FaShieldAlt /> {member.reserve} Yedek</span>
-                  <span className="flex items-center gap-1 bg-yellow-50 text-yellow-700 px-2.5 py-1.5 rounded-lg"><FaClock /> {member.waiting} Bekliyor</span>
-                </div>
-              </div>
-            </article>
-          ))}
+
+      {loading ? <div className="h-64 bg-slate-200 animate-pulse rounded-2xl" /> : (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-900 text-white">
+                <tr>
+                  <th className="text-left px-5 py-4 font-semibold">#</th>
+                  <th className="text-left px-5 py-4 font-semibold">Ad Soyad</th>
+                  <th className="text-center px-4 py-4 font-semibold">Başvuru</th>
+                  <th className="text-center px-4 py-4 font-semibold">As Kadro</th>
+                  <th className="text-center px-4 py-4 font-semibold">Yedek</th>
+                  <th className="text-center px-4 py-4 font-semibold">Bekliyor</th>
+                  <th className="text-left px-5 py-4 font-semibold min-w-56">Performans</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {rows.map((member, index) => (
+                  <tr key={member.id} className="hover:bg-primary-50/40 transition-colors">
+                    <td className="px-5 py-4 font-bold text-slate-400">{index + 1}</td>
+                    <td className="px-5 py-4">
+                      <div className="font-bold text-slate-800">{member.name}</div>
+                    </td>
+                    <td className="px-4 py-4 text-center font-semibold text-slate-600">{member.total}</td>
+                    <td className="px-4 py-4 text-center"><span className="inline-flex items-center gap-1 bg-green-50 text-green-700 px-2.5 py-1 rounded-full font-bold"><FaStar /> {member.asKadro}</span></td>
+                    <td className="px-4 py-4 text-center"><span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full font-bold"><FaShieldAlt /> {member.reserve}</span></td>
+                    <td className="px-4 py-4 text-center"><span className="inline-flex items-center gap-1 bg-yellow-50 text-yellow-700 px-2.5 py-1 rounded-full font-bold"><FaClock /> {member.waiting}</span></td>
+                    <td className="px-5 py-4">
+                      <div className="flex justify-between text-xs font-bold text-slate-500 mb-1.5"><span>Katılım</span><span>%{member.rate}</span></div>
+                      <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-primary-500 via-blue-500 to-green-500 rounded-full"
+                          style={{ width: `${member.rate}%` }} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

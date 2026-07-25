@@ -13,6 +13,7 @@ const navLinks = [
   { to: '/galeri', label: 'Galeri' },
   { to: '/anketler', label: 'Anketler' },
   { to: '/mac-kadrosu', label: 'Maç Kadrosu' },
+  { to: '/uye-istatistikleri', label: 'Üye İstatistikleri' },
   { to: '/hakkimizda', label: 'Hakkımızda' },
   { to: '/mac-kayit', label: 'Maça Katıl', highlight: true },
 ]
