@@ -3,12 +3,17 @@ import { useCollection, deleteDocument } from '../../hooks/useFirestore'
 import { supabase } from '../../lib/supabase'
 import { hashPassword } from '../../lib/crypto'
 import { FaTrash, FaCheck, FaTimes, FaPhone, FaEnvelope, FaUser, FaEdit, FaLock, FaStickyNote } from 'react-icons/fa'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { tr } from 'date-fns/locale'
 
 function formatDate(ts) {
   if (!ts) return ''
   try { return format(new Date(ts), 'd MMM yyyy', { locale: tr }) } catch { return '' }
+}
+
+function formatBirthDate(date) {
+  if (!date) return '—'
+  try { return format(parseISO(String(date).slice(0, 10)), 'd MMM yyyy', { locale: tr }) } catch { return '—' }
 }
 
 const STATUS = {
@@ -280,6 +285,8 @@ export default function ManageMembers() {
                 </th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600 hidden sm:table-cell">İletişim</th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600 hidden md:table-cell">Pozisyon / Rol</th>
+                <th className="text-left px-4 py-3 font-semibold text-slate-600 hidden xl:table-cell">Meslek</th>
+                <th className="text-left px-4 py-3 font-semibold text-slate-600 hidden xl:table-cell">Doğum Tarihi</th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600 hidden lg:table-cell">Tarih</th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600">Durum</th>
                 <th className="text-right px-4 py-3 font-semibold text-slate-600">İşlem</th>
@@ -323,6 +330,12 @@ export default function ManageMembers() {
                         <div className="text-xs text-slate-500 truncate max-w-[160px]">{d.position}</div>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${roleCls}`}>{roleLabel}</span>
                       </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600 text-xs hidden xl:table-cell">
+                      {d.occupation || '—'}
+                    </td>
+                    <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap hidden xl:table-cell">
+                      {formatBirthDate(d.birth_date)}
                     </td>
                     <td className="px-4 py-3 text-slate-400 text-xs hidden lg:table-cell">{formatDate(d.createdAt || d.created_at)}</td>
                     <td className="px-4 py-3">
