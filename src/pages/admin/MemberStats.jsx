@@ -20,10 +20,12 @@ const STATUS_CONFIG = {
 
 export default function MemberStats() {
   const { docs: requests, loading } = useCollection('match_requests', 'created_at', 1000)
+  const { docs: members } = useCollection('members', 'name', 500)
   const [openMember, setOpenMember] = useState(null)
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState('total') // 'total' | 'asKadro' | 'name'
   const [updatingStatus, setUpdatingStatus] = useState(null)
+  const memberById = useMemo(() => Object.fromEntries(members.map(member => [member.id, member])), [members])
 
   async function changeStatus(requestId, status) {
     setUpdatingStatus(requestId)
@@ -39,9 +41,11 @@ export default function MemberStats() {
       const id = r.member_id
       if (!id) return
       if (!map[id]) {
+        const canonicalName = memberById[id]?.name
+        const requestName = r.name || ''
         map[id] = {
           id,
-          name: r.name || '—',
+          name: canonicalName || (requestName.includes('@') ? 'İsimsiz Üye' : requestName) || '—',
           phone: r.phone || '',
           total: 0,
           asKadro: 0,
@@ -76,7 +80,7 @@ export default function MemberStats() {
     })
 
     return Object.values(map)
-  }, [requests])
+  }, [requests, memberById])
 
   const sorted = useMemo(() => {
     let list = stats.filter(s =>

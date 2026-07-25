@@ -37,6 +37,7 @@ import MembershipPage from './pages/MembershipPage'
 import TournamentPage from './pages/TournamentPage'
 import MatchRostersPage from './pages/MatchRostersPage'
 import ManageMatchRosters from './pages/admin/ManageMatchRosters'
+import Reports from './pages/admin/Reports'
 
 function PublicLayout({ children }) {
   return (
@@ -63,6 +64,7 @@ function AdminPages() {
           <Route path="mac-talepleri" element={<ManageMatchRequests />} />
           <Route path="mac-kadrosu" element={<ManageMatchRosters />} />
           <Route path="uye-istatistikleri" element={<MemberStats />} />
+          <Route path="raporlar" element={<Reports />} />
           <Route path="uyeler" element={<ManageMembers />} />
           <Route path="turnuvalar" element={<ManageTournaments />} />
           <Route path="mesajlar" element={<ManageMessages />} />

@@ -7,6 +7,7 @@ import SectionHeader from '../components/SectionHeader'
 import { useStaticCollection } from '../hooks/useFirestore'
 import { useSettings } from '../hooks/useSettings'
 import { FaArrowRight, FaInstagram, FaVolleyballBall, FaWhatsapp, FaYoutube } from 'react-icons/fa'
+import PublicMemberStats from '../components/PublicMemberStats'
 
 const CTA_SOCIALS = [
   {
@@ -153,6 +154,8 @@ export default function Home() {
             )}
           </section>
         </div>
+
+        <PublicMemberStats />
 
         {/* CTA */}
         {settings?.ctaText && (

@@ -19,6 +19,7 @@ const menuItems = [
   { to: '/admin/mac-talepleri', icon: FaClipboardList, label: 'Maç Talepleri' },
   { to: '/admin/mac-kadrosu', icon: FaVolleyballBall, label: 'Maç Kadrosu' },
   { to: '/admin/uye-istatistikleri', icon: FaMedal, label: 'Üye İstatistikleri' },
+  { to: '/admin/raporlar', icon: FaChartBar, label: 'Raporlar' },
   { to: '/admin/mesajlar', icon: FaComments, label: 'Mesajlar' },
   { to: '/admin/yoneticiler', icon: FaUserShield, label: 'Yöneticiler' },
   { to: '/admin/popup', icon: FaBell, label: 'Popup Yönetimi' },
