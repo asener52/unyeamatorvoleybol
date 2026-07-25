@@ -1,4 +1,6 @@
+import { useEffect, useMemo, useState } from 'react'
 import { useStaticCollection } from '../hooks/useFirestore'
+import { supabase } from '../lib/supabase'
 import { FaCalendarAlt, FaShieldAlt, FaVolleyballBall } from 'react-icons/fa'
 import { format, parseISO } from 'date-fns'
 import { tr } from 'date-fns/locale'
@@ -142,6 +144,37 @@ function Court({ roster }) {
 
 export default function MatchRostersPage() {
   const { docs: rosters, loading } = useStaticCollection('match_rosters', 20, 'event_date', true)
+  const [memberPositions, setMemberPositions] = useState({})
+  const memberIds = useMemo(() => [...new Set(rosters.flatMap(roster =>
+    [...(roster.team_a || []), ...(roster.team_b || []), ...(roster.reserves || [])]
+      .map(player => player.member_id)
+      .filter(Boolean)
+  ))], [rosters])
+
+  useEffect(() => {
+    if (!memberIds.length) return
+    supabase.from('members').select('id,position').in('id', memberIds)
+      .then(({ data }) => setMemberPositions(Object.fromEntries((data || []).map(member => [member.id, member.position]))))
+  }, [memberIds])
+
+  const visibleRosters = useMemo(() => {
+    const today = format(new Date(), 'yyyy-MM-dd')
+    return rosters
+      .filter(roster => !roster.event_date || String(roster.event_date).slice(0, 10) >= today)
+      .map(roster => {
+        const currentPosition = player => ({
+          ...player,
+          position: memberPositions[player.member_id] || player.position,
+        })
+        return {
+          ...roster,
+          team_a: (roster.team_a || []).map(currentPosition),
+          team_b: (roster.team_b || []).map(currentPosition),
+          reserves: (roster.reserves || []).map(currentPosition),
+        }
+      })
+  }, [rosters, memberPositions])
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
       <div className="text-center mb-9">
@@ -151,13 +184,13 @@ export default function MatchRostersPage() {
       </div>
       {loading ? (
         <div className="h-96 bg-slate-200 animate-pulse rounded-2xl" />
-      ) : !rosters.length ? (
+      ) : !visibleRosters.length ? (
         <div className="bg-white rounded-2xl border border-slate-100 py-16 text-center text-slate-400">
           Henüz yayınlanmış maç kadrosu yok.
         </div>
       ) : (
         <div className="space-y-10">
-          {rosters.map(roster => (
+          {visibleRosters.map(roster => (
             <section key={roster.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-6">
               <div className="mb-4">
                 <h2 className="text-xl font-extrabold text-slate-800">{roster.event_title}</h2>

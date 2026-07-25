@@ -33,8 +33,10 @@ function distributePlayers(players) {
 
 function getEvents(requests) {
   const map = new Map()
+  const today = new Date().toLocaleDateString('sv-SE')
   requests.forEach(request => {
     if (!request.event_id) return
+    if (request.event_date && String(request.event_date).slice(0, 10) < today) return
     const key = String(request.event_id)
     if (!map.has(key)) map.set(key, {
       id: key, title: request.event_title || 'Maç', date: request.event_date || '',
@@ -81,11 +83,18 @@ export default function ManageMatchRosters() {
   const [published, setPublished] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  function refreshPlayerPositions(players, memberMap = members) {
+    return (players || []).map(player => ({
+      ...player,
+      position: memberMap[player.member_id]?.position || player.position,
+    }))
+  }
+
   function applySavedRoster(selectedEventId, rosterData) {
     const saved = rosterData.find(roster => roster.event_id === selectedEventId)
-    setTeamA(saved?.team_a || [])
-    setTeamB(saved?.team_b || [])
-    setReserves(saved?.reserves || [])
+    setTeamA(refreshPlayerPositions(saved?.team_a))
+    setTeamB(refreshPlayerPositions(saved?.team_b))
+    setReserves(refreshPlayerPositions(saved?.reserves))
     setPublished(saved?.published || false)
   }
 
@@ -101,15 +110,20 @@ export default function ManageMatchRosters() {
     load().then(([{ data: requestData }, { data: memberData }, { data: rosterData }]) => {
       const nextRequests = requestData || []
       const nextRosters = rosterData || []
+      const nextMembers = Object.fromEntries((memberData || []).map(member => [member.id, member]))
       const selectedEventId = requestedEventId || getEvents(nextRequests)[0]?.id || ''
       setRequests(nextRequests)
-      setMembers(Object.fromEntries((memberData || []).map(member => [member.id, member])))
+      setMembers(nextMembers)
       setRosters(nextRosters)
       setEventId(selectedEventId)
       const saved = nextRosters.find(roster => roster.event_id === selectedEventId)
-      setTeamA(saved?.team_a || [])
-      setTeamB(saved?.team_b || [])
-      setReserves(saved?.reserves || [])
+      const currentPositions = players => (players || []).map(player => ({
+        ...player,
+        position: nextMembers[player.member_id]?.position || player.position,
+      }))
+      setTeamA(currentPositions(saved?.team_a))
+      setTeamB(currentPositions(saved?.team_b))
+      setReserves(currentPositions(saved?.reserves))
       setPublished(saved?.published || false)
     })
   }, [requestedEventId])
