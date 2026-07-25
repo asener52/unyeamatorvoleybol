@@ -8,13 +8,63 @@ function displayDate(date) {
   try { return format(parseISO(String(date).slice(0, 10)), 'd MMMM yyyy', { locale: tr }) } catch { return date }
 }
 
-function Player({ player, team }) {
+const TEAM_SLOTS = {
+  a: [
+    { key: 'back_top', left: 9, top: 20 },
+    { key: 'back_middle', left: 9, top: 50 },
+    { key: 'back_bottom', left: 9, top: 80 },
+    { key: 'front_top', left: 39, top: 20 },
+    { key: 'front_middle', left: 39, top: 50 },
+    { key: 'front_bottom', left: 39, top: 80 },
+  ],
+  b: [
+    { key: 'front_top', left: 61, top: 20 },
+    { key: 'front_middle', left: 61, top: 50 },
+    { key: 'front_bottom', left: 61, top: 80 },
+    { key: 'back_top', left: 91, top: 20 },
+    { key: 'back_middle', left: 91, top: 50 },
+    { key: 'back_bottom', left: 91, top: 80 },
+  ],
+}
+
+function preferredSlots(position = '') {
+  if (position.startsWith('Pasör Çaprazı')) return ['front_bottom', 'back_bottom', 'front_top']
+  if (position.startsWith('Pasör')) return ['back_bottom', 'front_bottom', 'back_middle']
+  if (position.startsWith('Smaçör')) return ['front_top', 'back_top', 'front_bottom']
+  if (position.startsWith('Orta')) return ['front_middle', 'front_top', 'front_bottom']
+  if (position.startsWith('Libero')) return ['back_middle', 'back_top', 'back_bottom']
+  if (position.startsWith('Defans')) return ['back_middle', 'back_top', 'back_bottom']
+  return ['back_top', 'back_middle', 'front_top', 'front_middle', 'back_bottom', 'front_bottom']
+}
+
+function positionPlayers(players, team) {
+  const available = [...TEAM_SLOTS[team]]
+  return players.map((player, index) => {
+    const preferences = preferredSlots(player.position)
+    let preferredIndex = -1
+    for (const preference of preferences) {
+      preferredIndex = available.findIndex(slot => slot.key === preference)
+      if (preferredIndex >= 0) break
+    }
+    const slotIndex = preferredIndex >= 0 ? preferredIndex : 0
+    const slot = available.splice(slotIndex, 1)[0]
+    return { player, number: index + 1, slot }
+  }).filter(item => item.slot)
+}
+
+function CourtPlayer({ player, team, number, slot }) {
   return (
-    <div className={`min-w-0 rounded-lg border px-1.5 py-2 text-center shadow-sm ${
-      team === 'a' ? 'bg-blue-700/90 border-blue-300' : 'bg-red-700/90 border-red-300'
-    }`}>
-      <div className="text-white font-bold text-xs sm:text-sm truncate" title={player.name}>{player.name}</div>
-      <div className="text-white/70 text-[9px] sm:text-[10px] truncate">{player.position}</div>
+    <div className="absolute min-w-0 w-20 sm:w-28 flex flex-col items-center justify-center z-20 -translate-x-1/2 -translate-y-1/2"
+      style={{ left: `${slot.left}%`, top: `${slot.top}%` }}>
+      <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white font-black text-sm sm:text-base ${
+        team === 'a' ? 'bg-blue-700' : 'bg-red-700'
+      }`}>
+        {number}
+      </div>
+      <div className="mt-1 bg-slate-950/80 text-white rounded-md px-1.5 py-1 max-w-full text-center shadow">
+        <div className="font-bold text-[9px] sm:text-xs truncate" title={player.name}>{player.name}</div>
+        <div className="text-white/65 text-[7px] sm:text-[9px] truncate">{player.position}</div>
+      </div>
     </div>
   )
 }
@@ -22,22 +72,70 @@ function Player({ player, team }) {
 function Court({ roster }) {
   const teamA = roster.team_a || []
   const teamB = roster.team_b || []
+  const reserves = roster.reserves || []
+  const positionedA = positionPlayers(teamA, 'a')
+  const positionedB = positionPlayers(teamB, 'b')
   return (
-    <div className="relative bg-orange-300 border-[6px] border-blue-500 rounded-xl overflow-hidden shadow-inner">
-      <div className="absolute inset-y-0 left-1/2 w-1 bg-white -translate-x-1/2 z-10 shadow" />
-      <div className="absolute inset-y-0 left-1/2 w-3 bg-slate-800/60 -translate-x-1/2 z-0" />
-      <div className="absolute inset-y-0 left-1/3 border-l-2 border-white/80 pointer-events-none" />
-      <div className="absolute inset-y-0 left-2/3 border-l-2 border-white/80 pointer-events-none" />
-      <div className="grid grid-cols-2 min-h-[330px] sm:min-h-[400px]">
-        <div className="p-3 sm:p-5 pr-5 sm:pr-8 grid grid-cols-2 sm:grid-cols-3 content-center gap-3">
-          {teamA.map(player => <Player key={player.request_id} player={player} team="a" />)}
+    <div className="bg-sky-700 rounded-2xl p-3 sm:p-6 shadow-inner overflow-hidden">
+      <div className="flex flex-col lg:flex-row gap-4 items-stretch">
+        <div className="relative flex-1 bg-orange-400 border-[3px] border-white shadow-xl aspect-[18/10] min-h-[300px]">
+          {/* Orta çizgi ve file */}
+          <div className="absolute inset-y-0 left-1/2 border-l-2 border-white -translate-x-1/2 z-10" />
+          <div className="absolute -top-2 -bottom-2 left-1/2 w-2 bg-slate-900/80 -translate-x-1/2 z-10 shadow-lg">
+            <div className="w-full h-full opacity-40" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 7px, white 8px)' }} />
+          </div>
+          <div className="absolute -top-3 left-1/2 w-3 h-3 bg-red-500 rounded-full -translate-x-1/2 z-20" />
+          <div className="absolute -bottom-3 left-1/2 w-3 h-3 bg-red-500 rounded-full -translate-x-1/2 z-20" />
+
+          {/* Üç metre hücum çizgileri */}
+          <div className="absolute inset-y-0 left-1/3 border-l-2 border-white/90 pointer-events-none" />
+          <div className="absolute inset-y-0 left-2/3 border-l-2 border-white/90 pointer-events-none" />
+
+          {positionedA.map(({ player, number, slot }) => (
+            <CourtPlayer key={player.request_id} player={player} team="a" number={number} slot={slot} />
+          ))}
+          {positionedB.map(({ player, number, slot }) => (
+            <CourtPlayer key={player.request_id} player={player} team="b" number={number} slot={slot} />
+          ))}
+
+          <div className="absolute top-2 left-2 bg-blue-800 text-white text-[10px] sm:text-xs font-extrabold px-2.5 py-1 rounded-full z-30">A TAKIMI</div>
+          <div className="absolute top-2 right-2 bg-red-800 text-white text-[10px] sm:text-xs font-extrabold px-2.5 py-1 rounded-full z-30">B TAKIMI</div>
         </div>
-        <div className="p-3 sm:p-5 pl-5 sm:pl-8 grid grid-cols-2 sm:grid-cols-3 content-center gap-3">
-          {teamB.map(player => <Player key={player.request_id} player={player} team="b" />)}
-        </div>
+
+        {/* Saha kenarı yedek kulübesi */}
+        <aside className="lg:w-48 bg-sky-900/85 border-2 border-white/70 rounded-xl p-3 text-white shrink-0">
+          <h3 className="font-extrabold text-xs uppercase tracking-wide flex items-center gap-2 border-b border-white/20 pb-2 mb-2">
+            <FaShieldAlt className="text-amber-300" /> Yedek Alanı
+          </h3>
+          {reserves.length ? (
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
+              {reserves.map((player, index) => (
+                <div key={player.request_id} className="flex items-center gap-2 bg-white/10 border border-white/15 rounded-lg p-2 min-w-0">
+                  <span className="w-6 h-6 rounded-full bg-amber-400 text-slate-900 flex items-center justify-center text-[10px] font-black shrink-0">
+                    Y{index + 1}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-bold truncate">{player.name}</div>
+                    <div className="text-[9px] text-white/60 truncate">{player.position}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-xs text-white/50 text-center py-5">Yedek oyuncu yok</div>
+          )}
+          <div className="mt-3 flex gap-1 justify-center">
+            {[1, 2, 3, 4].map(seat => <span key={seat} className="w-7 h-2 rounded-sm bg-slate-300/50" />)}
+          </div>
+        </aside>
       </div>
-      <div className="absolute top-2 left-3 bg-blue-800 text-white text-xs font-extrabold px-3 py-1 rounded-full">A TAKIMI</div>
-      <div className="absolute top-2 right-3 bg-red-800 text-white text-xs font-extrabold px-3 py-1 rounded-full">B TAKIMI</div>
+
+      {/* Hakem masası ve servis bölgeleri */}
+      <div className="flex items-center justify-center gap-2 mt-3 text-white/70">
+        <span className="h-1 w-16 bg-white/50 rounded-full" />
+        <span className="text-[9px] font-semibold uppercase tracking-widest">Hakem Masası</span>
+        <span className="h-1 w-16 bg-white/50 rounded-full" />
+      </div>
     </div>
   )
 }
@@ -70,20 +168,6 @@ export default function MatchRostersPage() {
                 )}
               </div>
               <Court roster={roster} />
-              {(roster.reserves || []).length > 0 && (
-                <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
-                  <h3 className="font-bold text-amber-800 flex items-center gap-2 mb-3">
-                    <FaShieldAlt /> Yedek Kadro
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {roster.reserves.map(player => (
-                      <span key={player.request_id} className="bg-white border border-amber-200 text-amber-900 px-3 py-1.5 rounded-full text-sm font-semibold">
-                        {player.name} <small className="text-amber-600">· {player.position}</small>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
             </section>
           ))}
         </div>
