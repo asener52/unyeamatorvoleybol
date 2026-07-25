@@ -27,14 +27,29 @@ function sanitizeFilename(filename) {
 // bucket: 'news' | 'sliders' | 'gallery' | 'events'
 export async function uploadFile(bucket, filename, file) {
   const safeName = sanitizeFilename(filename)
-  const path = `${Date.now()}_${safeName}`
+  const uniquePart = typeof globalThis.crypto?.randomUUID === 'function'
+    ? globalThis.crypto.randomUUID()
+    : `${Date.now()}_${Math.random().toString(36).slice(2)}`
+  const path = `${uniquePart}_${safeName}`
+  let lastError
 
-  const { data, error } = await supabase.storage
-    .from(bucket)
-    .upload(path, file, { upsert: true })
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .upload(path, file, { upsert: true, contentType: file.type || undefined })
 
-  if (error) throw new Error(error.message)
+      if (error) throw new Error(error.message)
 
-  const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path)
-  return urlData.publicUrl
+      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path)
+      return urlData.publicUrl
+    } catch (error) {
+      lastError = error
+      const isNetworkError = /failed to fetch|network|fetch/i.test(error?.message || '')
+      if (!isNetworkError || attempt === 3) break
+      await new Promise(resolve => setTimeout(resolve, attempt * 750))
+    }
+  }
+
+  throw new Error(lastError?.message || 'Dosya yüklenemedi')
 }

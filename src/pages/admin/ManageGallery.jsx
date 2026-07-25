@@ -148,22 +148,30 @@ export default function ManageGallery() {
     e.target.value = ''
     if (!files.length) return
     setBulkUploading(true)
+    const failed = []
+    let uploadedCount = 0
     try {
       let nextOrder = ordered.length > 0 ? Math.max(...ordered.map(d => d.order || 0)) + 1 : 1
       for (let i = 0; i < files.length; i += 1) {
         setBulkProgress(`${i + 1}/${files.length}`)
         const file = files[i]
-        const url = await uploadFile('gallery', file.name, file)
-        const titleFromFile = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ')
-        await addDocument('gallery', {
-          title: titleFromFile, url, type: 'image', published: true, order: nextOrder++,
-        })
+        try {
+          const url = await uploadFile('gallery', file.name, file)
+          const titleFromFile = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ')
+          await addDocument('gallery', {
+            title: titleFromFile, url, type: 'image', published: true, order: nextOrder++,
+          })
+          uploadedCount += 1
+        } catch (err) {
+          failed.push(`${file.name}: ${err.message}`)
+        }
       }
-    } catch (err) {
-      alert('Toplu yükleme sırasında hata: ' + err.message)
     } finally {
       setBulkUploading(false)
       setBulkProgress('')
+    }
+    if (failed.length) {
+      alert(`${uploadedCount} görsel yüklendi, ${failed.length} görsel yüklenemedi:\n\n${failed.join('\n')}`)
     }
   }
 

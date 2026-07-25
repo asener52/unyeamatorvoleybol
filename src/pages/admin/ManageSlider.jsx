@@ -129,6 +129,8 @@ export default function ManageSlider() {
     e.target.value = ''
     if (!files.length) return
     setBulkUploading(true)
+    const failed = []
+    let uploadedCount = 0
     try {
       let nextOrder = ordered.length
         ? Math.max(...ordered.map(d => Number(d.order) || 0)) + 1
@@ -136,17 +138,23 @@ export default function ManageSlider() {
       for (let i = 0; i < files.length; i += 1) {
         setBulkProgress(`${i + 1}/${files.length}`)
         const file = files[i]
-        const imageUrl = await uploadFile('sliders', file.name, file)
-        const title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ')
-        await addDocument('sliders', {
-          title, subtitle: '', imageUrl, published: false, order: nextOrder++, fit: 'cover',
-        })
+        try {
+          const imageUrl = await uploadFile('sliders', file.name, file)
+          const title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ')
+          await addDocument('sliders', {
+            title, subtitle: '', imageUrl, published: false, order: nextOrder++, fit: 'cover',
+          })
+          uploadedCount += 1
+        } catch (err) {
+          failed.push(`${file.name}: ${err.message}`)
+        }
       }
-    } catch (err) {
-      alert('Toplu yükleme sırasında hata: ' + err.message)
     } finally {
       setBulkUploading(false)
       setBulkProgress('')
+    }
+    if (failed.length) {
+      alert(`${uploadedCount} görsel yüklendi, ${failed.length} görsel yüklenemedi:\n\n${failed.join('\n')}`)
     }
   }
 
