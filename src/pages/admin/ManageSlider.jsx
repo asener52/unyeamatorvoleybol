@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useCollection, addDocument, updateDocument, deleteDocument } from '../../hooks/useFirestore'
 import { uploadFile } from '../../lib/supabase'
-import { FaPlus, FaEdit, FaTrash, FaEye, FaEyeSlash, FaTimes, FaImage, FaGripVertical, FaSave } from 'react-icons/fa'
+import { FaPlus, FaEdit, FaTrash, FaEye, FaEyeSlash, FaTimes, FaImage, FaGripVertical, FaSave, FaImages } from 'react-icons/fa'
 
 const EMPTY_FORM = { title: '', subtitle: '', imageUrl: '', published: false, order: 0, fit: 'cover' }
 
@@ -14,13 +14,17 @@ const FIT_OPTIONS = [
 export default function ManageSlider() {
   const [params] = useSearchParams()
   // ascending: true → order alanına göre küçükten büyüğe (anasayfayla aynı sıra)
-  const { docs, loading } = useCollection('sliders', 'order', 20, true)
+  const { docs, loading } = useCollection('sliders', 'order', 200, true)
   const [showForm, setShowForm] = useState(params.get('new') === '1')
   const [form, setForm] = useState(EMPTY_FORM)
   const [editId, setEditId] = useState(null)
   const [saving, setSaving] = useState(false)
   const [imgFile, setImgFile] = useState(null)
   const [imgPreview, setImgPreview] = useState('')
+  const [selectedIds, setSelectedIds] = useState([])
+  const [bulkUploading, setBulkUploading] = useState(false)
+  const [bulkProgress, setBulkProgress] = useState('')
+  const bulkInputRef = useRef(null)
 
   // Sürükle-bırak
   const [ordered, setOrdered] = useState([])
@@ -117,6 +121,51 @@ export default function ManageSlider() {
   async function handleDelete(id) {
     if (!confirm('Bu slider kaydını silmek istediğinizden emin misiniz?')) return
     await deleteDocument('sliders', id)
+    setSelectedIds(ids => ids.filter(item => item !== id))
+  }
+
+  async function handleBulkUpload(e) {
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    if (!files.length) return
+    setBulkUploading(true)
+    try {
+      let nextOrder = ordered.length
+        ? Math.max(...ordered.map(d => Number(d.order) || 0)) + 1
+        : 0
+      for (let i = 0; i < files.length; i += 1) {
+        setBulkProgress(`${i + 1}/${files.length}`)
+        const file = files[i]
+        const imageUrl = await uploadFile('sliders', file.name, file)
+        const title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ')
+        await addDocument('sliders', {
+          title, subtitle: '', imageUrl, published: false, order: nextOrder++, fit: 'cover',
+        })
+      }
+    } catch (err) {
+      alert('Toplu yükleme sırasında hata: ' + err.message)
+    } finally {
+      setBulkUploading(false)
+      setBulkProgress('')
+    }
+  }
+
+  function toggleSelected(id) {
+    setSelectedIds(ids => ids.includes(id) ? ids.filter(item => item !== id) : [...ids, id])
+  }
+
+  async function handleBulkDelete() {
+    if (!selectedIds.length) return
+    if (!confirm(`${selectedIds.length} slider kaydı silinecek. Devam etmek istiyor musunuz?`)) return
+    setSaving(true)
+    try {
+      await Promise.all(selectedIds.map(id => deleteDocument('sliders', id)))
+      setSelectedIds([])
+    } catch (err) {
+      alert('Toplu silme sırasında hata: ' + err.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function togglePublish(doc) {
@@ -130,7 +179,24 @@ export default function ManageSlider() {
           <h1 className="text-2xl font-extrabold text-slate-800">Slider Yönetimi</h1>
           <p className="text-slate-500 text-sm mt-0.5">Ana sayfa slider görsellerini yönetin · sürükleyerek sıralayın</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <input ref={bulkInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleBulkUpload} />
+          {ordered.length > 0 && (
+            <button onClick={() => setSelectedIds(selectedIds.length === ordered.length ? [] : ordered.map(d => d.id))}
+              className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 font-medium text-sm">
+              {selectedIds.length === ordered.length ? 'Seçimi Kaldır' : 'Tümünü Seç'}
+            </button>
+          )}
+          {selectedIds.length > 0 && (
+            <button onClick={handleBulkDelete} disabled={saving}
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg font-medium text-sm">
+              <FaTrash size={13} /> Seçilenleri Sil ({selectedIds.length})
+            </button>
+          )}
+          <button onClick={() => bulkInputRef.current?.click()} disabled={bulkUploading}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg font-medium text-sm">
+            <FaImages size={14} /> {bulkUploading ? `Yükleniyor ${bulkProgress}` : 'Toplu Görsel Ekle'}
+          </button>
           {orderDirty && (
             <button onClick={saveOrder} disabled={savingOrder}
               className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors">
@@ -259,10 +325,15 @@ export default function ManageSlider() {
               onDrop={e => onDrop(e, i)}
               onDragEnd={onDragEnd}
               className={`bg-white rounded-2xl overflow-hidden shadow border-2 transition-all cursor-grab active:cursor-grabbing select-none ${
-                dragOver === i ? 'border-primary-400 scale-[1.02] shadow-lg' : 'border-slate-100 hover:shadow-md'
+                selectedIds.includes(d.id) ? 'border-red-500 ring-2 ring-red-200' : dragOver === i ? 'border-primary-400 scale-[1.02] shadow-lg' : 'border-slate-100 hover:shadow-md'
               }`}
             >
               <div className="relative h-36 overflow-hidden bg-slate-100">
+                <label className="absolute top-2 left-10 z-20 w-6 h-6 rounded bg-white/95 shadow flex items-center justify-center cursor-pointer">
+                  <input type="checkbox" checked={selectedIds.includes(d.id)}
+                    onChange={() => toggleSelected(d.id)}
+                    className="w-4 h-4 rounded text-red-600" />
+                </label>
                 {d.imageUrl ? (
                   <img src={d.imageUrl} alt={d.title}
                     className={`w-full h-full ${d.fit === 'contain' ? 'object-contain' : 'object-cover'}`} />

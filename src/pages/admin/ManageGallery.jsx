@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useCollection, addDocument, updateDocument, deleteDocument } from '../../hooks/useFirestore'
 import { uploadFile } from '../../lib/supabase'
-import { FaPlus, FaTrash, FaEye, FaEyeSlash, FaTimes, FaImage, FaUpload, FaVideo, FaPlay, FaGlobeAmericas, FaGripVertical, FaSave } from 'react-icons/fa'
+import { FaPlus, FaTrash, FaEye, FaEyeSlash, FaTimes, FaImage, FaUpload, FaVideo, FaPlay, FaGlobeAmericas, FaGripVertical, FaSave, FaImages } from 'react-icons/fa'
 
 function getYoutubeThumbnail(url) {
   const m = url.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)
@@ -60,6 +60,10 @@ export default function ManageGallery() {
   const [imgPreview, setImgPreview] = useState('')
   const [published, setPublished] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [selectedIds, setSelectedIds] = useState([])
+  const [bulkUploading, setBulkUploading] = useState(false)
+  const [bulkProgress, setBulkProgress] = useState('')
+  const bulkInputRef = useRef(null)
 
   // Sürükle-bırak sıralama
   const [ordered, setOrdered] = useState([])
@@ -136,6 +140,49 @@ export default function ManageGallery() {
   async function handleDelete(id) {
     if (!confirm('Silmek istediğinizden emin misiniz?')) return
     await deleteDocument('gallery', id)
+    setSelectedIds(ids => ids.filter(item => item !== id))
+  }
+
+  async function handleBulkUpload(e) {
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    if (!files.length) return
+    setBulkUploading(true)
+    try {
+      let nextOrder = ordered.length > 0 ? Math.max(...ordered.map(d => d.order || 0)) + 1 : 1
+      for (let i = 0; i < files.length; i += 1) {
+        setBulkProgress(`${i + 1}/${files.length}`)
+        const file = files[i]
+        const url = await uploadFile('gallery', file.name, file)
+        const titleFromFile = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ')
+        await addDocument('gallery', {
+          title: titleFromFile, url, type: 'image', published: true, order: nextOrder++,
+        })
+      }
+    } catch (err) {
+      alert('Toplu yükleme sırasında hata: ' + err.message)
+    } finally {
+      setBulkUploading(false)
+      setBulkProgress('')
+    }
+  }
+
+  function toggleSelected(id) {
+    setSelectedIds(ids => ids.includes(id) ? ids.filter(item => item !== id) : [...ids, id])
+  }
+
+  async function handleBulkDelete() {
+    if (!selectedIds.length) return
+    if (!confirm(`${selectedIds.length} galeri öğesi silinecek. Devam etmek istiyor musunuz?`)) return
+    setSaving(true)
+    try {
+      await Promise.all(selectedIds.map(id => deleteDocument('gallery', id)))
+      setSelectedIds([])
+    } catch (err) {
+      alert('Toplu silme sırasında hata: ' + err.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function togglePublish(doc) {
@@ -149,7 +196,24 @@ export default function ManageGallery() {
           <h1 className="text-2xl font-extrabold text-slate-800">Galeri</h1>
           <p className="text-slate-500 text-sm mt-0.5">{docs.length} öğe</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
+          <input ref={bulkInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleBulkUpload} />
+          {ordered.length > 0 && (
+            <button onClick={() => setSelectedIds(selectedIds.length === ordered.length ? [] : ordered.map(d => d.id))}
+              className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 font-medium text-sm">
+              {selectedIds.length === ordered.length ? 'Seçimi Kaldır' : 'Tümünü Seç'}
+            </button>
+          )}
+          {selectedIds.length > 0 && (
+            <button onClick={handleBulkDelete} disabled={saving}
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg font-medium text-sm">
+              <FaTrash size={13} /> Seçilenleri Sil ({selectedIds.length})
+            </button>
+          )}
+          <button onClick={() => bulkInputRef.current?.click()} disabled={bulkUploading}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg font-medium text-sm">
+            <FaImages size={14} /> {bulkUploading ? `Yükleniyor ${bulkProgress}` : 'Toplu Görsel Ekle'}
+          </button>
           {orderDirty && (
             <button onClick={saveOrder} disabled={savingOrder}
               className="flex items-center gap-2 bg-gold-500 hover:bg-gold-600 text-primary-900 px-4 py-2 rounded-lg font-semibold text-sm transition-colors">
@@ -294,9 +358,14 @@ export default function ManageGallery() {
                   onDragLeave={onDragLeave}
                   onDrop={e => onDrop(e, i)}
                   className={`group relative aspect-square overflow-hidden rounded-xl border-2 bg-slate-100 transition-all ${
-                    dragOver === i ? 'border-primary-500 scale-105' : 'border-slate-200'
+                    selectedIds.includes(d.id) ? 'border-red-500 ring-2 ring-red-200' : dragOver === i ? 'border-primary-500 scale-105' : 'border-slate-200'
                   }`}
                 >
+                  <label className="absolute top-2 right-2 z-20 w-6 h-6 rounded bg-white/95 shadow flex items-center justify-center cursor-pointer">
+                    <input type="checkbox" checked={selectedIds.includes(d.id)}
+                      onChange={() => toggleSelected(d.id)}
+                      className="w-4 h-4 rounded text-red-600" />
+                  </label>
                   {isVideo ? (
                     thumb ? <img src={thumb} alt={d.title || ''} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-slate-300"><FaVideo size={32} /></div>
                   ) : (
@@ -314,7 +383,7 @@ export default function ManageGallery() {
                     <button onClick={() => handleDelete(d.id)} className="p-2 rounded-full bg-red-500 text-white hover:scale-110 transition-transform"><FaTrash size={14} /></button>
                   </div>
                   {d.title && <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs px-2 py-1 truncate">{d.title}</div>}
-                  {!d.published && <div className="absolute top-2 right-2 bg-slate-700/80 text-white text-xs px-2 py-0.5 rounded">Taslak</div>}
+                  {!d.published && <div className="absolute top-10 right-2 bg-slate-700/80 text-white text-xs px-2 py-0.5 rounded">Taslak</div>}
                   {isVideo && <div className="absolute bottom-6 right-2 bg-red-600/80 text-white text-xs px-2 py-0.5 rounded">Video</div>}
                   {d.type === 'panoramic' && <div className="absolute bottom-6 right-2 bg-primary-700/90 text-white text-xs px-2 py-0.5 rounded font-semibold">360°</div>}
                 </div>
