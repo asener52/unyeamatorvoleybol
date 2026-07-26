@@ -5,26 +5,30 @@ import { useMember } from '../contexts/MemberAuthContext'
 import { FaPoll, FaCheckCircle, FaLock, FaSignInAlt } from 'react-icons/fa'
 
 export default function PollCard({ poll }) {
-  const [voted, setVoted] = useState(() => localStorage.getItem(`poll_${poll.id}`) || null)
-  const [localVotes, setLocalVotes] = useState(poll.votes || {})
   const { member } = useMember()
+  const voteStorageKey = member ? `poll_${poll.id}_${member.id}` : `poll_${poll.id}_guest`
+  const [voted, setVoted] = useState(null)
+  const [localVotes, setLocalVotes] = useState(poll.votes || {})
+  const selectedVote = voted || (voteStorageKey ? localStorage.getItem(voteStorageKey) : null)
 
   const isMembers = poll.visibility === 'members'
   const totalVotes = Object.values(localVotes).reduce((a, b) => a + b, 0)
-  const canVote = !!member
+  const canVote = !isMembers || !!member
 
   async function handleVote(optionId) {
-    if (voted || !canVote) return
+    if (selectedVote || !canVote) return
     try {
       const newVotes = { ...localVotes, [optionId]: (localVotes[optionId] || 0) + 1 }
-      const { error } = await supabase.rpc('cast_poll_vote', {
-        p_poll_id: poll.id,
-        p_member_id: member.id,
-        p_option_id: optionId,
-      })
+      const { error } = member
+        ? await supabase.rpc('cast_poll_vote', {
+            p_poll_id: poll.id,
+            p_member_id: member.id,
+            p_option_id: optionId,
+          })
+        : await supabase.from('polls').update({ votes: newVotes }).eq('id', poll.id)
       if (error) throw error
       setLocalVotes(newVotes); setVoted(optionId)
-      localStorage.setItem(`poll_${poll.id}`, optionId)
+      localStorage.setItem(voteStorageKey, optionId)
     } catch (error) {
       if (error.code === '23505' || /unique|duplicate/i.test(error.message || '')) {
         alert('Bu ankete daha önce oy verdiniz.')
@@ -51,10 +55,10 @@ export default function PollCard({ poll }) {
         </div>
       </div>
 
-      {!member ? (
+      {isMembers && !member ? (
         <div className="text-center py-4 space-y-3">
           <FaLock className="text-primary-300 text-3xl mx-auto" />
-          <p className="text-slate-600 text-sm">Oyunuzun güvenli şekilde kaydedilmesi için üye girişi yapın.</p>
+          <p className="text-slate-600 text-sm">Bu anket yalnızca üyelere açıktır. Oy vermek için üye girişi yapın.</p>
           <Link to="/uye-giris"
             className="inline-flex items-center gap-2 bg-primary-700 hover:bg-primary-800 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors">
             <FaSignInAlt size={13} /> Üye Girişi
@@ -65,10 +69,10 @@ export default function PollCard({ poll }) {
           {poll.options?.map((opt) => {
             const count = localVotes[opt.id] || 0
             const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0
-            const isVoted = voted === opt.id
+            const isVoted = selectedVote === opt.id
             return (
               <div key={opt.id}>
-                {voted ? (
+                {selectedVote ? (
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span className={`font-medium flex items-center gap-1 ${isVoted ? 'text-primary-600' : 'text-slate-700'}`}>

@@ -1,7 +1,7 @@
 -- Kimlikli anket oyları
 CREATE TABLE IF NOT EXISTS public.poll_votes (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  poll_id uuid NOT NULL REFERENCES public.polls(id) ON DELETE CASCADE,
+  poll_id bigint NOT NULL REFERENCES public.polls(id) ON DELETE CASCADE,
   member_id uuid NOT NULL REFERENCES public.members(id) ON DELETE CASCADE,
   member_name text NOT NULL,
   option_id text NOT NULL,
@@ -22,14 +22,14 @@ CREATE POLICY "admin_delete_poll_votes" ON public.poll_votes
 
 -- Oy kaydı ve toplam sayacı aynı transaction içinde güncellenir.
 CREATE OR REPLACE FUNCTION public.cast_poll_vote(
-  p_poll_id uuid,
+  p_poll_id bigint,
   p_member_id uuid,
   p_option_id text
 ) RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $function$
 DECLARE
   v_member_name text;
   v_option_label text;
@@ -59,8 +59,8 @@ BEGIN
   )
   WHERE id = p_poll_id;
 END;
-$$;
+$function$;
 
-REVOKE ALL ON FUNCTION public.cast_poll_vote(uuid, uuid, text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.cast_poll_vote(uuid, uuid, text) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.cast_poll_vote(bigint, uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.cast_poll_vote(bigint, uuid, text) TO anon, authenticated;
 NOTIFY pgrst, 'reload schema';

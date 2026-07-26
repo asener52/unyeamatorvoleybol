@@ -235,6 +235,11 @@ export default function ManagePolls() {
               <button onClick={() => setVoteDetails(null)} className="text-slate-400 hover:text-slate-700"><FaTimes /></button>
             </div>
             <div className="p-5">
+              {voteDetails.poll.visibility === 'public' && (
+                <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg px-4 py-3 text-xs">
+                  Herkese açık anketlerde giriş yapmadan kullanılan oylar anonimdir. Aşağıdaki tabloda yalnızca giriş yapan üyelerin kimlikli oyları listelenir.
+                </div>
+              )}
               {loadingVotes ? (
                 <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-12 bg-slate-100 animate-pulse rounded-lg" />)}</div>
               ) : voteDetails.votes.length === 0 ? (
