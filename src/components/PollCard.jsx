@@ -11,17 +11,27 @@ export default function PollCard({ poll }) {
 
   const isMembers = poll.visibility === 'members'
   const totalVotes = Object.values(localVotes).reduce((a, b) => a + b, 0)
-  const canVote = !isMembers || !!member
+  const canVote = !!member
 
   async function handleVote(optionId) {
     if (voted || !canVote) return
     try {
       const newVotes = { ...localVotes, [optionId]: (localVotes[optionId] || 0) + 1 }
-      const { error } = await supabase.from('polls').update({ votes: newVotes }).eq('id', poll.id)
+      const { error } = await supabase.rpc('cast_poll_vote', {
+        p_poll_id: poll.id,
+        p_member_id: member.id,
+        p_option_id: optionId,
+      })
       if (error) throw error
       setLocalVotes(newVotes); setVoted(optionId)
       localStorage.setItem(`poll_${poll.id}`, optionId)
-    } catch { }
+    } catch (error) {
+      if (error.code === '23505' || /unique|duplicate/i.test(error.message || '')) {
+        alert('Bu ankete daha önce oy verdiniz.')
+      } else {
+        alert('Oy kaydedilemedi: ' + error.message)
+      }
+    }
   }
 
   return (
@@ -41,10 +51,10 @@ export default function PollCard({ poll }) {
         </div>
       </div>
 
-      {isMembers && !member ? (
+      {!member ? (
         <div className="text-center py-4 space-y-3">
           <FaLock className="text-primary-300 text-3xl mx-auto" />
-          <p className="text-slate-600 text-sm">Bu ankete katılmak için üye girişi yapın.</p>
+          <p className="text-slate-600 text-sm">Oyunuzun güvenli şekilde kaydedilmesi için üye girişi yapın.</p>
           <Link to="/uye-giris"
             className="inline-flex items-center gap-2 bg-primary-700 hover:bg-primary-800 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors">
             <FaSignInAlt size={13} /> Üye Girişi

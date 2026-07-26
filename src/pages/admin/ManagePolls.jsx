@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useCollection, addDocument, updateDocument, deleteDocument } from '../../hooks/useFirestore'
-import { FaPlus, FaEdit, FaTrash, FaEye, FaEyeSlash, FaTimes, FaMinus, FaCalendarAlt } from 'react-icons/fa'
+import { FaPlus, FaEdit, FaTrash, FaEye, FaEyeSlash, FaTimes, FaMinus, FaCalendarAlt, FaUsers, FaUser, FaCheckCircle } from 'react-icons/fa'
 
 const EMPTY_FORM = {
   question: '',
@@ -23,6 +23,8 @@ export default function ManagePolls() {
   const [editId, setEditId] = useState(null)
   const [saving, setSaving] = useState(false)
   const [events, setEvents] = useState([])
+  const [voteDetails, setVoteDetails] = useState(null)
+  const [loadingVotes, setLoadingVotes] = useState(false)
 
   useEffect(() => {
     supabase
@@ -80,11 +82,10 @@ export default function ManagePolls() {
         options: form.options,
         published: form.published,
         visibility: form.visibility,
-        votes: {},
         ...(form.event_id ? { event_id: form.event_id, event_title: form.event_title } : { event_id: null, event_title: null }),
       }
       if (editId) await updateDocument('polls', editId, data)
-      else await addDocument('polls', data)
+      else await addDocument('polls', { ...data, votes: {} })
       setShowForm(false)
     } catch (err) {
       alert('Hata: ' + err.message)
@@ -100,6 +101,22 @@ export default function ManagePolls() {
 
   async function togglePublish(doc) {
     await updateDocument('polls', doc.id, { published: !doc.published })
+  }
+
+  async function openVoteDetails(poll) {
+    setVoteDetails({ poll, votes: [] })
+    setLoadingVotes(true)
+    const { data, error } = await supabase.from('poll_votes')
+      .select('id,member_id,member_name,option_id,option_label,created_at')
+      .eq('poll_id', poll.id)
+      .order('created_at', { ascending: false })
+    setLoadingVotes(false)
+    if (error) {
+      alert('Oy detayları yüklenemedi: ' + error.message)
+      setVoteDetails(null)
+      return
+    }
+    setVoteDetails({ poll, votes: data || [] })
   }
 
   return (
@@ -207,6 +224,60 @@ export default function ManagePolls() {
         </div>
       )}
 
+      {voteDetails && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-8">
+            <div className="flex items-center justify-between p-5 border-b">
+              <div>
+                <h2 className="font-bold text-slate-800">Oy Detayları</h2>
+                <p className="text-sm text-slate-500 mt-0.5">{voteDetails.poll.question}</p>
+              </div>
+              <button onClick={() => setVoteDetails(null)} className="text-slate-400 hover:text-slate-700"><FaTimes /></button>
+            </div>
+            <div className="p-5">
+              {loadingVotes ? (
+                <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-12 bg-slate-100 animate-pulse rounded-lg" />)}</div>
+              ) : voteDetails.votes.length === 0 ? (
+                <div className="text-center py-10 text-slate-400">
+                  <FaUsers className="text-3xl mx-auto mb-2" />
+                  Henüz kimlikli oy bulunmuyor.
+                  <p className="text-xs mt-2">Bu özellikten önce kullanılan oyların kimliği geriye dönük belirlenemez.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="text-left px-4 py-3 text-slate-600">Oy Veren Üye</th>
+                        <th className="text-left px-4 py-3 text-slate-600">Verdiği Oy</th>
+                        <th className="text-left px-4 py-3 text-slate-600">Tarih</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {voteDetails.votes.map(vote => (
+                        <tr key={vote.id}>
+                          <td className="px-4 py-3 font-semibold text-slate-800">
+                            <span className="flex items-center gap-2"><FaUser className="text-primary-500" /> {vote.member_name}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 px-2.5 py-1 rounded-full font-semibold">
+                              <FaCheckCircle /> {vote.option_label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
+                            {new Date(vote.created_at).toLocaleString('tr-TR')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="h-20 bg-slate-200 animate-pulse rounded-xl" />)}</div>
       ) : docs.length === 0 ? (
@@ -229,6 +300,10 @@ export default function ManagePolls() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => openVoteDetails(d)}
+                    className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold bg-purple-50 text-purple-700 hover:bg-purple-100">
+                    <FaUsers size={11} /> Oy Detayları
+                  </button>
                   <button onClick={() => togglePublish(d)}
                     className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-semibold ${d.published ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
                     {d.published ? <><FaEye size={10} /> Yayında</> : <><FaEyeSlash size={10} /> Taslak</>}
