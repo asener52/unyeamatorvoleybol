@@ -60,6 +60,7 @@ function RosterSection({ title, players, icon, color, emptyText }) {
 
 export default function ManageMatchRequests() {
   const { docs, loading } = useCollection('match_requests', 'created_at', 500)
+  const { docs: members } = useCollection('members', 'created_at', 1000)
   const [filter, setFilter] = useState('hepsi')
   const [view, setView] = useState('liste') // 'liste' | 'mac'
   const [sortField, setSortField] = useState('event_date')
@@ -89,6 +90,17 @@ export default function ManageMatchRequests() {
   const [openGroups, setOpenGroups] = useState({})
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), [])
+  const memberNames = useMemo(
+    () => Object.fromEntries(members.map(member => [String(member.id), member.name])),
+    [members]
+  )
+  const requests = useMemo(
+    () => docs.map(request => ({
+      ...request,
+      name: memberNames[String(request.member_id)] || request.name,
+    })),
+    [docs, memberNames]
+  )
 
   const toggleGroup = useCallback(key => {
     setOpenGroups(prev => ({ ...prev, [key]: !prev[key] }))
@@ -116,7 +128,7 @@ export default function ManageMatchRequests() {
   }
 
   const filtered = useMemo(() => {
-    let list = docs.filter(d => (d.event_date || '') >= today)
+    let list = requests.filter(d => (d.event_date || '') >= today)
     if (filter !== 'hepsi') list = list.filter(d => d.type === filter || d.status === filter)
     list = [...list].sort((a, b) => {
       let va, vb
@@ -133,12 +145,12 @@ export default function ManageMatchRequests() {
       return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va)
     })
     return list
-  }, [docs, filter, sortField, sortDir])
+  }, [requests, filter, sortField, sortDir, today])
 
   // Maç bazlı gruplama: sadece gelecek etkinlikler
   const matchGroups = useMemo(() => {
     const map = {}
-    docs.filter(d => (d.event_date || '') >= today).forEach(d => {
+    requests.filter(d => (d.event_date || '') >= today).forEach(d => {
       const key = d.event_id || '__no_event__'
       if (!map[key]) map[key] = {
         eventId: String(key),
@@ -155,10 +167,10 @@ export default function ManageMatchRequests() {
       else map[key].bekliyor.push(d)
     })
     return Object.values(map).sort((a, b) => (a.date || '').localeCompare(b.date || ''))
-  }, [docs])
+  }, [requests, today])
 
   // Sadece mevcut/gelecek maçlardaki talepler
-  const currentDocs = useMemo(() => docs.filter(d => (d.event_date || '') >= today), [docs, today])
+  const currentDocs = useMemo(() => requests.filter(d => (d.event_date || '') >= today), [requests, today])
   const asKadroCount    = currentDocs.filter(d => d.status === 'as_kadro').length
   const yedekKadroCount = currentDocs.filter(d => d.status === 'yedek_kadro').length
   const bekliyorCount   = currentDocs.filter(d => d.status === 'bekliyor').length

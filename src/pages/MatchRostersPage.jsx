@@ -155,7 +155,7 @@ function Court({ roster }) {
 
 export default function MatchRostersPage() {
   const { docs: rosters, loading } = useStaticCollection('match_rosters', 20, 'event_date', true)
-  const [memberPositions, setMemberPositions] = useState({})
+  const [memberDetails, setMemberDetails] = useState({})
   const memberIds = useMemo(() => [...new Set(rosters.flatMap(roster =>
     [...(roster.team_a || []), ...(roster.team_b || []), ...(roster.reserves || [])]
       .map(player => player.member_id)
@@ -164,8 +164,8 @@ export default function MatchRostersPage() {
 
   useEffect(() => {
     if (!memberIds.length) return
-    supabase.from('members').select('id,position').in('id', memberIds)
-      .then(({ data }) => setMemberPositions(Object.fromEntries((data || []).map(member => [member.id, member.position]))))
+    supabase.from('members').select('id,name,position').in('id', memberIds)
+      .then(({ data }) => setMemberDetails(Object.fromEntries((data || []).map(member => [member.id, member]))))
   }, [memberIds])
 
   const visibleRosters = useMemo(() => {
@@ -175,7 +175,8 @@ export default function MatchRostersPage() {
       .map(roster => {
         const currentPosition = player => ({
           ...player,
-          position: memberPositions[player.member_id] || player.position,
+          name: memberDetails[player.member_id]?.name || player.name,
+          position: memberDetails[player.member_id]?.position || player.position,
         })
         return {
           ...roster,
@@ -184,7 +185,7 @@ export default function MatchRostersPage() {
           reserves: (roster.reserves || []).map(currentPosition),
         }
       })
-  }, [rosters, memberPositions])
+  }, [rosters, memberDetails])
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">

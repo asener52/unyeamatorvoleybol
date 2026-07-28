@@ -83,18 +83,19 @@ export default function ManageMatchRosters() {
   const [published, setPublished] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  function refreshPlayerPositions(players, memberMap = members) {
+  function refreshPlayers(players, memberMap = members) {
     return (players || []).map(player => ({
       ...player,
+      name: memberMap[player.member_id]?.name || player.name,
       position: memberMap[player.member_id]?.position || player.position,
     }))
   }
 
   function applySavedRoster(selectedEventId, rosterData) {
     const saved = rosterData.find(roster => roster.event_id === selectedEventId)
-    setTeamA(refreshPlayerPositions(saved?.team_a))
-    setTeamB(refreshPlayerPositions(saved?.team_b))
-    setReserves(refreshPlayerPositions(saved?.reserves))
+    setTeamA(refreshPlayers(saved?.team_a))
+    setTeamB(refreshPlayers(saved?.team_b))
+    setReserves(refreshPlayers(saved?.reserves))
     setPublished(saved?.published || false)
   }
 
@@ -119,6 +120,7 @@ export default function ManageMatchRosters() {
       const saved = nextRosters.find(roster => roster.event_id === selectedEventId)
       const currentPositions = players => (players || []).map(player => ({
         ...player,
+        name: nextMembers[player.member_id]?.name || player.name,
         position: nextMembers[player.member_id]?.position || player.position,
       }))
       setTeamA(currentPositions(saved?.team_a))
@@ -136,14 +138,14 @@ export default function ManageMatchRosters() {
       .map(request => ({
         request_id: request.id,
         member_id: request.member_id,
-        name: request.name,
+        name: members[request.member_id]?.name || request.name,
         position: members[request.member_id]?.position || 'Diğer',
       }))
     const reservePlayers = eventRequests.filter(request => request.status === 'yedek_kadro' && request.type === 'oyuncu')
       .map(request => ({
         request_id: request.id,
         member_id: request.member_id,
-        name: request.name,
+        name: members[request.member_id]?.name || request.name,
         position: members[request.member_id]?.position || 'Diğer',
       }))
     const balanced = distributePlayers(asPlayers)
