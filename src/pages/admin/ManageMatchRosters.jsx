@@ -41,11 +41,21 @@ function distributePlayers(players) {
   const teamA = []
   const teamB = []
   POSITION_ORDER.forEach(position => {
-    groups[position].forEach(player => {
+    const shuffledPlayers = [...groups[position]]
+    for (let i = shuffledPlayers.length - 1; i > 0; i--) {
+      const randomIndex = Math.floor(Math.random() * (i + 1))
+      ;[shuffledPlayers[i], shuffledPlayers[randomIndex]] = [shuffledPlayers[randomIndex], shuffledPlayers[i]]
+    }
+    shuffledPlayers.forEach(player => {
       if (teamA.length < teamB.length) teamA.push(player)
       else if (teamB.length < teamA.length) teamB.push(player)
-      else (teamA.filter(p => positionGroup(p.position) === position).length <=
-        teamB.filter(p => positionGroup(p.position) === position).length ? teamA : teamB).push(player)
+      else {
+        const teamAPositionCount = teamA.filter(p => positionGroup(p.position) === position).length
+        const teamBPositionCount = teamB.filter(p => positionGroup(p.position) === position).length
+        if (teamAPositionCount < teamBPositionCount) teamA.push(player)
+        else if (teamBPositionCount < teamAPositionCount) teamB.push(player)
+        else (Math.random() < 0.5 ? teamA : teamB).push(player)
+      }
     })
   })
   return { teamA, teamB }
