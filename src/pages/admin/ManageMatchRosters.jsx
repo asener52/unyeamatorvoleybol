@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { FaRandom, FaSave, FaEye, FaEyeSlash, FaVolleyballBall } from 'react-icons/fa'
+import { FaRandom, FaSave, FaEye, FaEyeSlash, FaVolleyballBall, FaSyncAlt } from 'react-icons/fa'
 
 const POSITION_ORDER = ['Pasör', 'Pasör Çaprazı', 'Smaçör', 'Orta Oyuncu', 'Libero', 'Defans Uzmanı', 'Diğer']
 
@@ -13,6 +13,26 @@ function positionGroup(position = '') {
   if (position.startsWith('Libero')) return 'Libero'
   if (position.startsWith('Defans')) return 'Defans Uzmanı'
   return 'Diğer'
+}
+
+function phoneKey(phone = '') {
+  return String(phone).replace(/\D/g, '').slice(-10)
+}
+
+function findMember(request, memberMap, memberList) {
+  const byId = memberMap[String(request?.member_id)]
+  if (byId) return byId
+
+  const requestPhone = phoneKey(request?.phone)
+  if (requestPhone) {
+    const byPhone = memberList.find(member => phoneKey(member.phone) === requestPhone)
+    if (byPhone) return byPhone
+  }
+
+  const requestName = String(request?.name || '').trim().toLocaleLowerCase('tr-TR')
+  return memberList.find(member =>
+    String(member.name || '').trim().toLocaleLowerCase('tr-TR') === requestName
+  )
 }
 
 function distributePlayers(players) {
@@ -82,13 +102,21 @@ export default function ManageMatchRosters() {
   const [reserves, setReserves] = useState([])
   const [published, setPublished] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
-  function refreshPlayers(players, memberMap = members) {
-    return (players || []).map(player => ({
-      ...player,
-      name: memberMap[player.member_id]?.name || player.name,
-      position: memberMap[player.member_id]?.position || player.position,
-    }))
+  function refreshPlayers(players, memberMap = members, requestList = requests) {
+    const memberList = Object.values(memberMap)
+    return (players || []).map(player => {
+      const request = requestList.find(item => String(item.id) === String(player.request_id))
+      const member = findMember({ ...request, ...player }, memberMap, memberList)
+        || findMember(request, memberMap, memberList)
+      return {
+        ...player,
+        member_id: member?.id || player.member_id,
+        name: member?.name || player.name,
+        position: member?.position || player.position,
+      }
+    })
   }
 
   function applySavedRoster(selectedEventId, rosterData) {
@@ -102,7 +130,7 @@ export default function ManageMatchRosters() {
   async function load() {
     return Promise.all([
       supabase.from('match_requests').select('*').order('event_date'),
-      supabase.from('members').select('id,name,position'),
+      supabase.from('members').select('id,name,phone,position'),
       supabase.from('match_rosters').select('*').order('event_date'),
     ])
   }
@@ -118,11 +146,20 @@ export default function ManageMatchRosters() {
       setRosters(nextRosters)
       setEventId(selectedEventId)
       const saved = nextRosters.find(roster => roster.event_id === selectedEventId)
-      const currentPositions = players => (players || []).map(player => ({
-        ...player,
-        name: nextMembers[player.member_id]?.name || player.name,
-        position: nextMembers[player.member_id]?.position || player.position,
-      }))
+      const currentPositions = players => {
+        const memberList = Object.values(nextMembers)
+        return (players || []).map(player => {
+          const request = nextRequests.find(item => String(item.id) === String(player.request_id))
+          const member = findMember({ ...request, ...player }, nextMembers, memberList)
+            || findMember(request, nextMembers, memberList)
+          return {
+            ...player,
+            member_id: member?.id || player.member_id,
+            name: member?.name || player.name,
+            position: member?.position || player.position,
+          }
+        })
+      }
       setTeamA(currentPositions(saved?.team_a))
       setTeamB(currentPositions(saved?.team_b))
       setReserves(currentPositions(saved?.reserves))
@@ -134,24 +171,139 @@ export default function ManageMatchRosters() {
 
   function buildAutomatic() {
     const eventRequests = requests.filter(request => String(request.event_id) === eventId)
+    const memberList = Object.values(members)
     const asPlayers = eventRequests.filter(request => request.status === 'as_kadro' && request.type === 'oyuncu')
-      .map(request => ({
-        request_id: request.id,
-        member_id: request.member_id,
-        name: members[request.member_id]?.name || request.name,
-        position: members[request.member_id]?.position || 'Diğer',
-      }))
+      .map(request => {
+        const member = findMember(request, members, memberList)
+        return {
+          request_id: request.id,
+          member_id: member?.id || request.member_id,
+          name: member?.name || request.name,
+          position: member?.position || request.position || 'Diğer',
+        }
+      })
     const reservePlayers = eventRequests.filter(request => request.status === 'yedek_kadro' && request.type === 'oyuncu')
-      .map(request => ({
-        request_id: request.id,
-        member_id: request.member_id,
-        name: members[request.member_id]?.name || request.name,
-        position: members[request.member_id]?.position || 'Diğer',
-      }))
+      .map(request => {
+        const member = findMember(request, members, memberList)
+        return {
+          request_id: request.id,
+          member_id: member?.id || request.member_id,
+          name: member?.name || request.name,
+          position: member?.position || request.position || 'Diğer',
+        }
+      })
     const balanced = distributePlayers(asPlayers)
     setTeamA(balanced.teamA)
     setTeamB(balanced.teamB)
     setReserves(reservePlayers)
+  }
+
+  async function refreshRoster() {
+    if (!eventId) return
+    setRefreshing(true)
+
+    const [{ data: requestData, error: requestError }, { data: memberData, error: memberError }] = await Promise.all([
+      supabase.from('match_requests').select('*').order('event_date'),
+      supabase.from('members').select('id,name,phone,position'),
+    ])
+
+    if (requestError || memberError) {
+      alert('Kadro yenilenemedi: ' + (requestError?.message || memberError?.message))
+      setRefreshing(false)
+      return
+    }
+
+    const nextRequests = requestData || []
+    const nextMembers = Object.fromEntries((memberData || []).map(member => [member.id, member]))
+    const memberList = Object.values(nextMembers)
+    const eventRequests = nextRequests.filter(request => String(request.event_id) === eventId)
+    const asRequests = eventRequests.filter(request => request.status === 'as_kadro' && request.type === 'oyuncu')
+    const reserveRequests = eventRequests.filter(request => request.status === 'yedek_kadro' && request.type === 'oyuncu')
+
+    const toPlayer = request => {
+      const member = findMember(request, nextMembers, memberList)
+      return {
+        request_id: request.id,
+        member_id: member?.id || request.member_id,
+        name: member?.name || request.name,
+        position: member?.position || request.position || 'Diğer',
+      }
+    }
+
+    const asById = new Map(asRequests.map(request => [String(request.id), toPlayer(request)]))
+    const reserveById = new Map(reserveRequests.map(request => [String(request.id), toPlayer(request)]))
+    const retainedIds = new Set()
+
+    const keepTeamPlayers = list => list.flatMap(player => {
+      const updated = asById.get(String(player.request_id))
+      if (!updated) return []
+      retainedIds.add(String(player.request_id))
+      return [updated]
+    })
+
+    const nextTeamA = keepTeamPlayers(teamA)
+    const nextTeamB = keepTeamPlayers(teamB)
+    const nextReserves = []
+
+    reserves.forEach(player => {
+      const id = String(player.request_id)
+      const updatedReserve = reserveById.get(id)
+      if (updatedReserve) {
+        nextReserves.push(updatedReserve)
+        retainedIds.add(id)
+      }
+    })
+
+    // Yedekten as kadroya alınanlar ve yeni as oyuncular, mevcut dizilişi
+    // bozmadan oyuncu sayısı az olan takıma eklenir.
+    asRequests.forEach(request => {
+      const id = String(request.id)
+      if (retainedIds.has(id)) return
+      const player = asById.get(id)
+      if (nextTeamA.length <= nextTeamB.length) nextTeamA.push(player)
+      else nextTeamB.push(player)
+      retainedIds.add(id)
+    })
+
+    // As kadrodan yedeğe alınanlar ve yeni yedekler yedek alanına taşınır.
+    reserveRequests.forEach(request => {
+      const id = String(request.id)
+      if (retainedIds.has(id)) return
+      nextReserves.push(reserveById.get(id))
+      retainedIds.add(id)
+    })
+
+    setRequests(nextRequests)
+    setMembers(nextMembers)
+    setTeamA(nextTeamA)
+    setTeamB(nextTeamB)
+    setReserves(nextReserves)
+
+    const event = getEvents(nextRequests).find(item => item.id === eventId)
+    if (event) {
+      const payload = {
+        event_id: event.id,
+        event_title: event.title,
+        event_date: event.date || null,
+        team_a: nextTeamA,
+        team_b: nextTeamB,
+        reserves: nextReserves,
+        published,
+        updated_at: new Date().toISOString(),
+      }
+      const { error: saveError } = await supabase
+        .from('match_rosters')
+        .upsert(payload, { onConflict: 'event_id' })
+      if (saveError) {
+        alert('Kadro yenilendi ancak kaydedilemedi: ' + saveError.message)
+      } else {
+        setRosters(current => [
+          ...current.filter(roster => roster.event_id !== event.id),
+          payload,
+        ])
+      }
+    }
+    setRefreshing(false)
   }
 
   function movePlayer(player, destination) {
@@ -197,6 +349,11 @@ export default function ManageMatchRosters() {
           <p className="text-sm text-slate-500">As kadrodan mevkilere göre dengeli iki takım oluşturun.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button onClick={refreshRoster} disabled={refreshing || !eventId}
+            className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+            <FaSyncAlt className={refreshing ? 'animate-spin' : ''} />
+            {refreshing ? 'Yenileniyor...' : 'Kadroyu Yenile'}
+          </button>
           <button onClick={buildAutomatic} disabled={!eventId}
             className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold">
             <FaRandom /> Otomatik Takım Oluştur
